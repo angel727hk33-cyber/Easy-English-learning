@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動英文溫習小助手 - 打怪升級版</title>
+    <title>互動英文溫習小助手 - 豪華戰鬥版</title>
+    <!-- 引入煙花特效庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         body {
             font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e272e; /* 改為較有遊戲感的深色背景 */
+            background-color: #1e272e; 
             color: #ecf0f1;
             text-align: center;
             padding: 10px;
             margin: 0;
+            overflow-x: hidden;
         }
         .container {
             max-width: 650px;
@@ -20,30 +23,58 @@
             padding: 20px;
             border-radius: 20px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            position: relative;
         }
-        h1 { color: #f1c40f; margin-top: 10px;}
+        h1 { color: #f1c40f; margin-top: 5px; font-size: 28px;}
         .hidden { display: none !important; }
         
-        /* 遊戲資訊列 (金幣與等級) */
+        /* 任務切換分頁 */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tab-btn {
+            background-color: #7f8c8d;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            flex-grow: 1;
+            transition: 0.3s;
+        }
+        .tab-btn.active {
+            background-color: #34495e;
+            color: #f1c40f;
+            border-bottom: 3px solid #f1c40f;
+        }
+
+        /* 遊戲資訊列 */
         .game-hud {
             display: flex;
             justify-content: space-between;
             background-color: #34495e;
             padding: 10px 20px;
-            border-radius: 10px;
+            border-radius: 0 0 10px 10px;
             margin-bottom: 15px;
             font-size: 20px;
             font-weight: bold;
             border: 2px solid #f39c12;
+            border-top: none;
             color: #f1c40f;
         }
+        .player-hp { color: #e74c3c; font-size: 22px; letter-spacing: 2px;}
 
         /* 戰鬥區設計 */
         .battle-arena {
             display: flex;
             justify-content: space-around;
             align-items: flex-end;
-            background: linear-gradient(to bottom, #87CEEB 0%, #a2d149 100%); /* 天空與草地 */
+            background: linear-gradient(to bottom, #87CEEB 0%, #a2d149 100%);
             height: 180px;
             border-radius: 15px;
             margin-bottom: 20px;
@@ -52,139 +83,102 @@
             position: relative;
         }
         
-        .player-sprite {
-            font-size: 80px;
-            transition: transform 0.1s;
-        }
-        
-        .monster-area {
+        .entity-area {
             display: flex;
             flex-direction: column;
             align-items: center;
+            position: relative;
         }
         
-        .monster-sprite {
-            font-size: 90px;
-            transition: transform 0.1s;
-        }
+        .sprite { font-size: 80px; transition: transform 0.1s; z-index: 2;}
+        .monster-sprite { font-size: 90px; }
 
-        /* 怪獸血條 */
+        /* 血條設計 */
+        .hp-label { font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 2px; text-shadow: 1px 1px white;}
         .hp-bar-container {
-            width: 100px;
-            height: 12px;
-            background-color: #c0392b;
-            border-radius: 6px;
-            margin-bottom: 5px;
-            border: 2px solid #fff;
-            overflow: hidden;
+            width: 100px; height: 12px; background-color: #c0392b;
+            border-radius: 6px; margin-bottom: 5px; border: 2px solid #fff; overflow: hidden;
         }
-        .hp-fill {
-            height: 100%;
-            background-color: #2ecc71;
-            width: 100%;
-            transition: width 0.3s ease;
-        }
+        .hp-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
+        .monster-hp { background-color: #2ecc71; }
 
         /* 動畫效果 */
         @keyframes attackShake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(20px); }
-            50% { transform: translateX(-10px); }
-            100% { transform: translateX(0); }
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(30px) scale(1.1); }
         }
-        @keyframes monsterHit {
-            0% { transform: translateX(0) rotate(0deg); filter: brightness(1); }
+        @keyframes hitShake {
+            0%, 100% { transform: translateX(0) rotate(0deg); filter: brightness(1); }
             25% { transform: translateX(-15px) rotate(-10deg); filter: brightness(2) drop-shadow(0 0 10px red); }
-            50% { transform: translateX(15px) rotate(10deg); filter: brightness(2); }
-            100% { transform: translateX(0) rotate(0deg); filter: brightness(1); }
+            75% { transform: translateX(15px) rotate(10deg); filter: brightness(2) drop-shadow(0 0 10px red); }
         }
-        .animate-attack { animation: attackShake 0.3s; }
-        .animate-hit { animation: monsterHit 0.4s; }
+        @keyframes playerHurt {
+            0%, 100% { filter: none; transform: translateX(0); }
+            50% { filter: drop-shadow(0 0 15px red); transform: translateX(-10px); }
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
 
-        /* 學習進度標籤 */
-        .stage-badge {
-            display: inline-block;
-            padding: 8px 15px;
-            border-radius: 20px;
+        .animate-attack { animation: attackShake 0.3s; }
+        .animate-hit { animation: hitShake 0.4s; }
+        .animate-hurt { animation: playerHurt 0.4s; }
+
+        /* 飄浮文字 */
+        .floating-text {
+            position: absolute;
+            font-size: 28px;
             font-weight: bold;
-            color: white;
-            margin-bottom: 10px;
-            font-size: 16px;
+            z-index: 10;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+        }
+        .text-gain { color: #f1c40f; text-shadow: 2px 2px #d35400; }
+        .text-loss { color: #e74c3c; text-shadow: 2px 2px #c0392b; }
+
+        /* 提示與輸入區 */
+        .stage-badge {
+            display: inline-block; padding: 8px 15px; border-radius: 20px;
+            font-weight: bold; color: white; margin-bottom: 10px; font-size: 16px;
         }
         .stage-0 { background-color: #3498db; } 
         .stage-1 { background-color: #9b59b6; } 
         .stage-2 { background-color: #e74c3c; } 
 
-        /* 提示區升級 */
         #hintBox {
-            font-size: 48px;
-            font-weight: bold;
-            letter-spacing: 5px;
-            background-color: #ecf0f1;
-            color: #2c3e50;
-            padding: 15px;
-            border-radius: 15px;
-            margin: 10px 0;
-            min-height: 60px;
-            border: 3px dashed #3498db;
-            word-wrap: break-word;
+            font-size: 48px; font-weight: bold; letter-spacing: 5px;
+            background-color: #ecf0f1; color: #2c3e50; padding: 15px;
+            border-radius: 15px; margin: 10px 0; min-height: 60px;
+            border: 3px dashed #3498db; word-wrap: break-word;
         }
-        .vowel { color: #e74c3c; }    
-        .consonant { color: #2980b9; } 
-
-        /* 句子區特別樣式 */
         .sentence-mode #hintBox { font-size: 32px; letter-spacing: 2px; }
-        
-        #repeatDots { font-size: 20px; margin-bottom: 10px; letter-spacing: 5px; }
+        .vowel { color: #e74c3c; } .consonant { color: #2980b9; } 
 
-        /* 按鈕與輸入區 */
-        textarea {
-            width: 85%;
-            height: 70px;
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 10px;
-            border: none;
-            margin-bottom: 15px;
-        }
+        /* 按鈕與輸入 */
+        textarea { width: 85%; height: 70px; padding: 10px; font-size: 16px; border-radius: 10px; margin-bottom: 15px; }
         .input-group { background: #34495e; padding: 15px; border-radius: 15px; margin-bottom: 15px;}
         .input-group h3 { margin: 0 0 10px 0; color: #34db98; text-align: left; padding-left: 20px;}
 
         button {
-            background-color: #2ecc71;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 18px;
-            border-radius: 10px;
-            cursor: pointer;
-            margin: 5px;
-            font-weight: bold;
-            box-shadow: 0 4px 0 #27ae60;
+            background-color: #2ecc71; color: white; border: none; padding: 12px 25px;
+            font-size: 18px; border-radius: 10px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #27ae60;
         }
         button:active { transform: translateY(4px); box-shadow: 0 0 0; }
         .btn-voice { background-color: #f39c12; border-radius: 50px; box-shadow: 0 4px 0 #d68910;}
-        .btn-back { background-color: #95a5a6; font-size: 14px; padding: 8px 15px; box-shadow: 0 4px 0 #7f8c8d;}
+        .btn-back { background-color: #95a5a6; font-size: 14px; padding: 8px 15px; box-shadow: 0 4px 0 #7f8c8d; margin-bottom:10px;}
         
         input[type="text"] {
-            width: 85%;
-            padding: 15px;
-            font-size: 28px;
-            text-align: center;
-            border-radius: 10px;
-            border: 3px solid #f1c40f;
-            margin: 10px 0;
-            outline: none;
-            font-weight: bold;
-            background: #fff;
-            color: #333;
+            width: 85%; padding: 15px; font-size: 28px; text-align: center;
+            border-radius: 10px; border: 3px solid #f1c40f; margin: 10px 0; outline: none; font-weight: bold;
         }
         input[type="text"]:focus { border-color: #e74c3c; }
         
         #feedbackMessage { font-size: 20px; font-weight: bold; margin: 10px 0; min-height: 30px; }
         .correct { color: #2ecc71; }
         .wrong { color: #e74c3c; }
-        #progressText { color: #bdc3c7; font-size: 14px; font-weight: bold;}
+        #progressText { color: #bdc3c7; font-size: 14px; font-weight: bold; margin-bottom: 5px;}
+        #repeatDots { font-size: 20px; margin-bottom: 10px; letter-spacing: 5px; }
     </style>
 </head>
 <body>
@@ -194,51 +188,58 @@
 
     <!-- 家長設定區 -->
     <div id="parentMode">
-        <p style="color: #ecf0f1;">請準備今天的戰鬥裝備（溫習內容）：</p>
-        
+        <p style="color: #ecf0f1;">準備戰鬥裝備：</p>
         <div class="input-group">
             <h3>📝 詞語區 (以逗號或換行隔開)</h3>
-            <textarea id="wordInput" placeholder="例如: apple, beautiful, elephant"></textarea>
+            <textarea id="wordInput" placeholder="apple, beautiful, elephant"></textarea>
         </div>
-
         <div class="input-group">
             <h3 style="color: #3498db;">💬 句子區 (每行一句)</h3>
-            <textarea id="sentenceInput" placeholder="例如:&#10;I have a pen.&#10;She is eating an apple."></textarea>
+            <textarea id="sentenceInput" placeholder="I have a pen.&#10;She is reading."></textarea>
         </div>
-
-        <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px;">⚔️ 開始戰鬥！</button>
+        <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px;">⚔️ 開始挑戰！</button>
     </div>
 
-    <!-- 小朋友溫習/戰鬥區 -->
+    <!-- 小朋友戰鬥區 -->
     <div id="kidMode" class="hidden">
         
+        <!-- 自由切換分頁 -->
+        <div class="tab-container">
+            <button id="tabWord" class="tab-btn active" onclick="switchTab('word')">🗡️ 詞語挑戰</button>
+            <button id="tabSentence" class="tab-btn" onclick="switchTab('sentence')">🛡️ 句子挑戰</button>
+        </div>
+
         <!-- 遊戲狀態 HUD -->
         <div class="game-hud">
-            <span>🪙 金幣: <span id="coinScore">0</span></span>
-            <span>🏆 LV. <span id="playerLevel">1</span></span>
+            <span class="player-hp" id="playerHpDisplay">❤️❤️❤️</span>
+            <span>🪙 <span id="coinScore">0</span></span>
+            <span>🏆 LV.<span id="playerLevel">1</span></span>
         </div>
 
         <!-- 打怪戰鬥畫面 -->
-        <div class="battle-arena">
-            <div id="player" class="player-sprite">🦸‍♂️</div>
-            <div class="monster-area">
+        <div class="battle-arena" id="arena">
+            <div class="entity-area">
+                <div class="hp-label">玩家</div>
+                <div id="player" class="sprite">🦸‍♂️</div>
+            </div>
+            
+            <div class="entity-area">
+                <div class="hp-label">怪獸血量</div>
                 <div class="hp-bar-container">
-                    <div id="monsterHpFill" class="hp-fill"></div>
+                    <div id="monsterHpFill" class="hp-fill monster-hp"></div>
                 </div>
-                <div id="monster" class="monster-sprite">👾</div>
+                <div id="monster" class="sprite monster-sprite">👾</div>
             </div>
         </div>
 
+        <button class="btn-back" onclick="switchMode('parent')">🏳️ 撤退修改</button>
+        <button class="btn-voice" onclick="speakWord()">🔊 聽音效</button>
+
+        <!-- 任務狀態 -->
         <div id="progressText">任務進度：1 / 5</div>
-        <div id="stageBadge" class="stage-badge stage-0">第一關：眼望望，跟住打</div>
+        <div id="stageBadge" class="stage-badge stage-0">第一關</div>
         <div id="repeatDots"></div>
 
-        <div>
-            <button class="btn-voice" onclick="speakWord()">🔊 聽音效</button>
-            <button class="btn-back" onclick="switchMode('parent')">🏳️ 撤退修改</button>
-        </div>
-
-        <!-- 提示與輸入區 -->
         <div id="taskArea">
             <div id="hintBox">APPLE</div>
             <input type="text" id="spellInput" placeholder="輸入攻擊指令..." autocomplete="off">
@@ -250,20 +251,27 @@
 </div>
 
 <script>
-    let tasks = []; // 混合存放詞語和句子
-    let currentIndex = 0;
-    let learningStage = 0; 
-    let typingCount = 0;   
+    // 遊戲資料
+    let tasks = { word: [], sentence: [] };
+    let currentIndex = { word: 0, sentence: 0 };
+    let learningStage = { word: 0, sentence: 0 };
+    let typingCount = { word: 0, sentence: 0 };
+    let activeTab = 'word';
+    let isAnimating = false; // 防誤觸鎖
     
-    // 遊戲系統變數
+    // 玩家與怪獸系統
     let coins = 0;
     let playerLevel = 1;
+    let playerMaxHp = 3;
+    let playerCurrentHp = 3;
     let monsterHp = 100;
     const monsterList = ['👾', '🐉', '🦖', '👹', '👽', '👻', '🦇'];
     let currentMonsterIndex = 0;
 
-    const wordStageNames = ["第一關：睇清楚，跟住打 👀", "第二關：拆字謎，拼拼圖 🧩", "第三關：靠記憶，自己默 🧠"];
-    const sentenceStageNames = ["第一關：讀原句，照住打 👀", "第二關：字詞亂了，排番好 🧩", "第三關：聽讀音，全句默 🧠"];
+    const stageNames = {
+        word: ["第一關：睇清楚，跟住打 👀", "第二關：拆字謎，拼拼圖 🧩", "第三關：靠記憶，自己默 🧠"],
+        sentence: ["第一關：讀原句，照住打 👀", "第二關：字詞亂了，排番好 🧩", "第三關：聽讀音，全句默 🧠"]
+    };
 
     window.onload = function() {
         if (localStorage.getItem('savedWords')) document.getElementById('wordInput').value = localStorage.getItem('savedWords');
@@ -277,96 +285,99 @@
         localStorage.setItem('savedWords', rawWords);
         localStorage.setItem('savedSentences', rawSentences);
         
-        tasks = [];
+        tasks.word = rawWords.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+        tasks.sentence = rawSentences.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
+        if (tasks.word.length === 0 && tasks.sentence.length === 0) {
+            alert("請至少輸入一個詞語或句子！"); return;
+        }
+
+        // 初始化進度
+        currentIndex = { word: 0, sentence: 0 };
+        learningStage = { word: 0, sentence: 0 };
+        typingCount = { word: 0, sentence: 0 };
+        playerCurrentHp = playerMaxHp;
+        monsterHp = 100; 
+        updateHpUI();
         
-        // 處理詞語
-        const wordArr = rawWords.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
-        wordArr.forEach(w => tasks.push({ text: w, type: 'word' }));
+        // 決定初始Tab
+        activeTab = tasks.word.length > 0 ? 'word' : 'sentence';
+        switchTab(activeTab);
+        switchMode('kid');
+    }
 
-        // 處理句子 (只用換行隔開，不用逗號，因為句子裡可能有逗號)
-        const sentenceArr = rawSentences.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-        sentenceArr.forEach(s => tasks.push({ text: s, type: 'sentence' }));
-
-        if (tasks.length > 0) {
-            currentIndex = 0;
-            learningStage = 0;
-            typingCount = 0;
-            monsterHp = 100; // 重置怪獸血量
-            updateMonsterUI();
-            switchMode('kid');
-            updateUI();
-        } else {
-            alert("請至少輸入一個詞語或句子！");
+    // 分頁切換
+    function switchTab(tabType) {
+        if (tasks[tabType].length === 0) {
+            alert(`你沒有設定${tabType === 'word' ? '詞語' : '句子'}的題目喔！`); return;
         }
+        activeTab = tabType;
+        document.getElementById('tabWord').classList.toggle('active', tabType === 'word');
+        document.getElementById('tabSentence').classList.toggle('active', tabType === 'sentence');
+        document.getElementById('feedbackMessage').innerHTML = "";
+        updateUI();
     }
 
-    function speakWord() {
-        if (tasks.length === 0) return;
-        const utterance = new SpeechSynthesisUtterance(tasks[currentIndex].text);
-        utterance.lang = 'en-GB'; 
-        utterance.rate = tasks[currentIndex].type === 'sentence' ? 0.7 : 0.8; // 句子讀慢一點
-        window.speechSynthesis.speak(utterance);
+    // 飄浮文字特效
+    function showFloatingText(text, type, elementId) {
+        const target = document.getElementById(elementId);
+        const floatEl = document.createElement('div');
+        floatEl.className = `floating-text ${type === 'gain' ? 'text-gain' : 'text-loss'}`;
+        floatEl.innerText = text;
+        
+        // 設定飄浮起始位置（目標元素正上方）
+        const rect = target.getBoundingClientRect();
+        const arenaRect = document.getElementById('arena').getBoundingClientRect();
+        floatEl.style.left = (rect.left - arenaRect.left + rect.width/2 - 20) + 'px';
+        floatEl.style.top = (rect.top - arenaRect.top - 20) + 'px';
+        
+        document.getElementById('arena').appendChild(floatEl);
+        setTimeout(() => floatEl.remove(), 1000);
     }
 
-    function formatPhonicsWord(word) {
-        const vowels = ['a', 'e', 'i', 'o', 'u'];
-        let formatted = '';
-        for (let char of word) {
-            if (vowels.includes(char.toLowerCase())) {
-                formatted += `<span class="vowel">${char}</span>`;
-            } else if (/[a-zA-Z]/.test(char)) {
-                formatted += `<span class="consonant">${char}</span>`;
-            } else {
-                formatted += char; 
+    // 發射煙花
+    function triggerFireworks() {
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
+    }
+
+    // 更新生命值 UI
+    function updateHpUI() {
+        document.getElementById('playerHpDisplay').innerText = '❤️'.repeat(playerCurrentHp) + '🖤'.repeat(playerMaxHp - playerCurrentHp);
+        
+        const hpFill = document.getElementById('monsterHpFill');
+        hpFill.style.width = Math.max(0, monsterHp) + "%";
+        hpFill.style.backgroundColor = monsterHp < 40 ? "#e74c3c" : "#2ecc71";
+    }
+
+    // 玩家受傷
+    function playerTakeDamage() {
+        if (playerCurrentHp > 0) {
+            playerCurrentHp--;
+            updateHpUI();
+            showFloatingText("-1 ❤️", 'loss', 'player');
+            
+            const playerEl = document.getElementById('player');
+            playerEl.classList.remove('animate-hurt');
+            void playerEl.offsetWidth; 
+            playerEl.classList.add('animate-hurt');
+
+            if (playerCurrentHp === 0) {
+                setTimeout(() => {
+                    alert("力氣用盡了！休息一下，生命值已為你補滿！");
+                    playerCurrentHp = playerMaxHp;
+                    updateHpUI();
+                }, 500);
             }
         }
-        return formatted;
     }
 
-    function scrambleText(text, type) {
-        if (type === 'word') {
-            // 詞語：打亂字母
-            let shuffled = text.split('').sort(()=> 0.5-Math.random()).join(' - ');
-            while(shuffled.replace(/ - /g, '') === text && text.length > 1) {
-                shuffled = text.split('').sort(()=> 0.5-Math.random()).join(' - ');
-            }
-            return shuffled;
-        } else {
-            // 句子：打亂單字，不打亂字母
-            let words = text.split(' ');
-            let shuffled = [...words].sort(()=> 0.5-Math.random()).join(' / ');
-            while(shuffled.replace(/ \/ /g, ' ') === text && words.length > 1) {
-                shuffled = [...words].sort(()=> 0.5-Math.random()).join(' / ');
-            }
-            return shuffled;
-        }
-    }
-
-    function updateRepeatDots(type) {
-        const dotsContainer = document.getElementById('repeatDots');
-        // 詞語需要打3次，句子只需打1次
-        const targetCount = (type === 'word') ? 3 : 1; 
-
-        if (learningStage === 0 && type === 'word') {
-            dotsContainer.style.display = "block";
-            let dots = "";
-            for(let i=0; i<targetCount; i++) {
-                dots += (i < typingCount) ? "🟢" : "⚪";
-            }
-            dotsContainer.innerText = dots;
-        } else {
-            dotsContainer.style.display = "none";
-        }
-    }
-
-    // 遊戲戰鬥邏輯
-    function triggerAttack() {
+    // 攻擊怪獸
+    function attackMonster() {
         const player = document.getElementById('player');
         const monster = document.getElementById('monster');
         
-        // 播放動畫
         player.classList.remove('animate-attack');
-        void player.offsetWidth; // 觸發重繪
+        void player.offsetWidth;
         player.classList.add('animate-attack');
         
         setTimeout(() => {
@@ -374,130 +385,159 @@
             void monster.offsetWidth;
             monster.classList.add('animate-hit');
             
-            // 扣血與加分
-            monsterHp -= 34; // 大約3次攻擊打死一隻怪
+            showFloatingText("+10 🪙", 'gain', 'monster');
+            
+            monsterHp -= 34; 
             coins += 10;
             document.getElementById('coinScore').innerText = coins;
             
+            // 每 100 分放一次煙花
+            if (coins > 0 && coins % 100 === 0) triggerFireworks();
+            
             if (monsterHp <= 0) {
-                // 打死怪獸
                 monsterHp = 100;
                 playerLevel++;
                 currentMonsterIndex = (currentMonsterIndex + 1) % monsterList.length;
                 document.getElementById('playerLevel').innerText = playerLevel;
                 document.getElementById('monster').innerText = monsterList[currentMonsterIndex];
-                
-                // 放煙花動畫(用符號代替)
-                const fb = document.getElementById('feedbackMessage');
-                fb.innerHTML += " 💥怪獸被打敗了！升級！";
+                document.getElementById('feedbackMessage').innerHTML += " 💥怪獸被打敗了！升級！";
+                triggerFireworks(); // 升級也放煙花
             }
-            updateMonsterUI();
-        }, 150); // 延遲讓玩家"撞"到怪獸再受傷
-    }
-
-    function updateMonsterUI() {
-        const hpFill = document.getElementById('monsterHpFill');
-        hpFill.style.width = Math.max(0, monsterHp) + "%";
-        if (monsterHp < 40) {
-            hpFill.style.backgroundColor = "#e74c3c"; // 低血量變紅
-        } else {
-            hpFill.style.backgroundColor = "#2ecc71"; // 正常綠色
-        }
+            updateHpUI();
+            isAnimating = false; // 解除鎖定
+        }, 150);
     }
 
     function checkAnswer() {
+        if (isAnimating) return; // 避免連按
+        
         const inputField = document.getElementById('spellInput');
-        // 忽略多餘空格和大小寫
         const userInput = inputField.value.replace(/\s+/g, ' ').trim().toLowerCase();
-        const correctText = tasks[currentIndex].text;
-        // 為了容錯，批改時忽略句子最後的標點符號 (如 . 或 !)
-        const cleanCorrectAnswer = correctText.replace(/[.!?]$/, '').toLowerCase();
+        const currentTask = tasks[activeTab][currentIndex[activeTab]];
+        
+        const cleanCorrectAnswer = currentTask.replace(/[.!?]$/, '').toLowerCase();
         const cleanUserInput = userInput.replace(/[.!?]$/, '');
-
         const feedbackMessage = document.getElementById('feedbackMessage');
-        const currentType = tasks[currentIndex].type;
 
         if (cleanUserInput === cleanCorrectAnswer) {
+            isAnimating = true; // 鎖定輸入
             inputField.value = ""; 
-            
-            // 成功攻擊！
-            triggerAttack();
+            attackMonster(); // 觸發攻擊動畫與加分
 
-            const targetCount = (currentType === 'word') ? 3 : 1;
+            const targetCount = (activeTab === 'word') ? 3 : 1;
+            let currentStage = learningStage[activeTab];
 
-            if (learningStage === 0) {
-                typingCount++;
-                updateRepeatDots(currentType);
-                
-                if (typingCount < targetCount) {
-                    feedbackMessage.innerHTML = `✨ 很好！還有 ${targetCount - typingCount} 次！`;
+            if (currentStage === 0) {
+                typingCount[activeTab]++;
+                if (typingCount[activeTab] < targetCount) {
+                    feedbackMessage.innerHTML = `✨ 很好！還有 ${targetCount - typingCount[activeTab]} 次！`;
                     feedbackMessage.className = "correct";
                     inputField.focus();
+                    updateRepeatDots();
                     return; 
                 } else {
-                    typingCount = 0; 
-                    learningStage++; 
+                    typingCount[activeTab] = 0; 
+                    learningStage[activeTab]++; 
                 }
             } else {
-                learningStage++;
+                learningStage[activeTab]++;
             }
 
             feedbackMessage.innerHTML = "🎯 完美命中！";
             feedbackMessage.className = "correct";
             
             setTimeout(() => {
-                if (learningStage > 2) {
-                    currentIndex++;
-                    learningStage = 0;
+                if (learningStage[activeTab] > 2) {
+                    currentIndex[activeTab]++;
+                    learningStage[activeTab] = 0;
                 }
                 updateUI();
             }, 1000);
 
         } else {
-            feedbackMessage.innerHTML = "💦 哎呀，攻擊落空！再檢查一次！";
+            feedbackMessage.innerHTML = "💦 哎呀，攻擊落空！(扣除1顆愛心)";
             feedbackMessage.className = "wrong";
+            playerTakeDamage(); // 觸發受傷與扣血
             inputField.focus();
         }
     }
 
+    // -- 以下為 UI 更新與輔助功能 (與上一版邏輯相若) --
+    
+    function speakWord() {
+        if (tasks[activeTab].length === 0) return;
+        const utterance = new SpeechSynthesisUtterance(tasks[activeTab][currentIndex[activeTab]]);
+        utterance.lang = 'en-GB'; 
+        utterance.rate = activeTab === 'sentence' ? 0.7 : 0.8;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function formatPhonicsWord(word) {
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+        let formatted = '';
+        for (let char of word) {
+            if (vowels.includes(char.toLowerCase())) formatted += `<span class="vowel">${char}</span>`;
+            else if (/[a-zA-Z]/.test(char)) formatted += `<span class="consonant">${char}</span>`;
+            else formatted += char; 
+        }
+        return formatted;
+    }
+
+    function scrambleText(text, type) {
+        if (type === 'word') {
+            let shuffled = text.split('').sort(()=> 0.5-Math.random()).join(' - ');
+            while(shuffled.replace(/ - /g, '') === text && text.length > 1) shuffled = text.split('').sort(()=> 0.5-Math.random()).join(' - ');
+            return shuffled;
+        } else {
+            let words = text.split(' ');
+            let shuffled = [...words].sort(()=> 0.5-Math.random()).join(' / ');
+            while(shuffled.replace(/ \/ /g, ' ') === text && words.length > 1) shuffled = [...words].sort(()=> 0.5-Math.random()).join(' / ');
+            return shuffled;
+        }
+    }
+
+    function updateRepeatDots() {
+        const dotsContainer = document.getElementById('repeatDots');
+        if (learningStage[activeTab] === 0 && activeTab === 'word') {
+            dotsContainer.style.display = "block";
+            let dots = "";
+            for(let i=0; i<3; i++) dots += (i < typingCount[activeTab]) ? "🟢" : "⚪";
+            dotsContainer.innerText = dots;
+        } else {
+            dotsContainer.style.display = "none";
+        }
+    }
+
     function updateUI() {
-        if (currentIndex >= tasks.length) {
-            document.getElementById('progressText').innerText = "✅ 所有敵人已被消滅！";
+        const currentList = tasks[activeTab];
+        const cIndex = currentIndex[activeTab];
+        const cStage = learningStage[activeTab];
+
+        if (cIndex >= currentList.length) {
+            document.getElementById('progressText').innerText = "✅ 本區所有敵人已被消滅！";
             document.getElementById('stageBadge').className = "hidden";
-            document.getElementById('hintBox').innerHTML = `🏆 勝利！<br><span style="font-size:24px">你總共獲得了 ${coins} 枚金幣！</span>`;
+            document.getElementById('hintBox').innerHTML = `🏆 勝利！可以切換到另一區繼續！`;
             document.getElementById('spellInput').classList.add('hidden');
             document.getElementById('submitBtn').classList.add('hidden');
             document.getElementById('repeatDots').classList.add('hidden');
-            document.getElementById('feedbackMessage').innerHTML = "";
             return;
         }
 
-        const currentTask = tasks[currentIndex];
+        const currentText = currentList[cIndex];
         const taskArea = document.getElementById('taskArea');
+        activeTab === 'sentence' ? taskArea.classList.add('sentence-mode') : taskArea.classList.remove('sentence-mode');
         
-        // 調整外觀 (句子字體稍微縮小)
-        if (currentTask.type === 'sentence') {
-            taskArea.classList.add('sentence-mode');
-        } else {
-            taskArea.classList.remove('sentence-mode');
-        }
-        
-        document.getElementById('progressText').innerText = `任務進度：${currentIndex + 1} / ${tasks.length} (${currentTask.type === 'word' ? '詞語' : '句子'})`;
-        
+        document.getElementById('progressText').innerText = `任務進度：${cIndex + 1} / ${currentList.length}`;
         const badge = document.getElementById('stageBadge');
-        badge.innerText = currentTask.type === 'word' ? wordStageNames[learningStage] : sentenceStageNames[learningStage];
-        badge.className = `stage-badge stage-${learningStage}`;
+        badge.innerText = stageNames[activeTab][cStage];
+        badge.className = `stage-badge stage-${cStage}`;
         
         const hintBox = document.getElementById('hintBox');
-        if (learningStage === 0) {
-            hintBox.innerHTML = currentTask.type === 'word' ? formatPhonicsWord(currentTask.text) : currentTask.text; 
-        } else if (learningStage === 1) {
-            hintBox.innerText = scrambleText(currentTask.text, currentTask.type);
-        } else if (learningStage === 2) {
-            hintBox.innerText = "❓❓❓"; 
-        }
+        if (cStage === 0) hintBox.innerHTML = activeTab === 'word' ? formatPhonicsWord(currentText) : currentText; 
+        else if (cStage === 1) hintBox.innerText = scrambleText(currentText, activeTab);
+        else if (cStage === 2) hintBox.innerText = "❓❓❓"; 
 
-        updateRepeatDots(currentTask.type); 
+        updateRepeatDots(); 
 
         const inputField = document.getElementById('spellInput');
         inputField.value = "";
@@ -511,10 +551,7 @@
     }
 
     document.getElementById("spellInput").addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            event.preventDefault();
-            checkAnswer();
-        }
+        if (event.key === "Enter") { event.preventDefault(); checkAnswer(); }
     });
 
     function switchMode(mode) {
