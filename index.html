@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英文默書小助手</title>
+    <title>互動英文溫習小助手</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f8ff;
+            background-color: #e8f4f8;
             color: #333;
             text-align: center;
             padding: 20px;
@@ -17,36 +17,64 @@
             margin: 0 auto;
             background: white;
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
         }
-        h1 { color: #4a90e2; }
+        h1 { color: #2c3e50; }
         .hidden { display: none; }
         
+        /* 學習進度標籤 */
+        .stage-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 15px;
+        }
+        .stage-0 { background-color: #3498db; } /* 認字 */
+        .stage-1 { background-color: #9b59b6; } /* 重組 */
+        .stage-2 { background-color: #e74c3c; } /* 默寫 */
+
+        /* 提示區（顯示單字或打亂的字母） */
+        #hintBox {
+            font-size: 36px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #2c3e50;
+            background-color: #f1f2f6;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 50px;
+        }
+
         /* 按鈕設計 */
         button {
-            background-color: #4a90e2;
+            background-color: #2ecc71;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 8px;
+            padding: 12px 25px;
+            font-size: 18px;
+            border-radius: 10px;
             cursor: pointer;
             margin: 5px;
             transition: 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        button:hover { background-color: #357abd; }
-        .btn-secondary { background-color: #f39c12; }
-        .btn-secondary:hover { background-color: #e67e22; }
+        button:hover { background-color: #27ae60; transform: translateY(-2px); }
+        .btn-voice { background-color: #f39c12; border-radius: 50px; font-size: 20px;}
+        .btn-voice:hover { background-color: #d68910; }
+        .btn-back { background-color: #95a5a6; font-size: 14px; padding: 8px 15px;}
         
         /* 輸入框設計 */
         textarea {
             width: 90%;
             height: 100px;
-            padding: 10px;
+            padding: 15px;
             font-size: 16px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
+            border-radius: 10px;
+            border: 2px solid #bdc3c7;
             margin-bottom: 10px;
         }
         input[type="text"] {
@@ -54,65 +82,77 @@
             padding: 15px;
             font-size: 24px;
             text-align: center;
-            border-radius: 8px;
-            border: 2px solid #4a90e2;
-            margin: 20px 0;
+            border-radius: 10px;
+            border: 3px solid #3498db;
+            margin: 10px 0;
+            outline: none;
         }
+        input[type="text"]:focus { border-color: #2ecc71; }
         
         /* 回饋訊息 */
         #feedbackMessage {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             margin: 15px 0;
-            min-height: 35px;
+            min-height: 30px;
         }
         .correct { color: #2ecc71; }
         .wrong { color: #e74c3c; }
         
-        /* 進度條文字 */
-        #progressText { color: #7f8c8d; font-size: 14px; margin-bottom: 15px;}
+        #progressText { color: #7f8c8d; font-size: 16px; margin-bottom: 10px; font-weight: bold;}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>📝 英文默書小助手</h1>
+    <h1>🚀 互動英文溫習小助手</h1>
 
     <!-- 家長設定區 -->
     <div id="parentMode">
-        <h2>家長設定區</h2>
-        <p>請輸入要默寫的生字或句子（用逗號或換行隔開）：</p>
-        <textarea id="wordInput" placeholder="例如: apple, banana, I love reading"></textarea><br>
-        <button onclick="saveWords()">儲存並開始練習</button>
+        <h2>✏️ 學習清單設定</h2>
+        <p>請輸入今天要溫習的生字（用逗號或換行隔開）：</p>
+        <textarea id="wordInput" placeholder="例如: apple, banana, elephant"></textarea><br>
+        <button onclick="saveWords()">💾 儲存並開始溫習</button>
     </div>
 
-    <!-- 小朋友練習區 -->
+    <!-- 小朋友溫習區 -->
     <div id="kidMode" class="hidden">
-        <button class="btn-secondary" onclick="switchMode('parent')" style="float: left; font-size: 12px;">返回設定</button>
+        <button class="btn-back" onclick="switchMode('parent')" style="float: left;">⬅️ 返回設定</button>
         <div style="clear: both;"></div>
         
-        <h2 id="progressText">第 1 / 5 題</h2>
+        <div id="progressText">詞語進度：1 / 5</div>
         
-        <!-- 播放語音按鈕 -->
-        <button onclick="speakWord()" style="font-size: 24px; padding: 15px 30px; border-radius: 50px;">🔊 聽讀音</button>
+        <!-- 當前學習階段標籤 -->
+        <div id="stageBadge" class="stage-badge stage-0">第一關：眼望望，跟住打</div>
         
+        <!-- 語音按鈕 -->
+        <div>
+            <button class="btn-voice" onclick="speakWord()">🔊 聽讀音</button>
+        </div>
+
+        <!-- 視覺提示區 (顯示原字、打亂的字，或隱藏) -->
+        <div id="hintBox">APPLE</div>
+        
+        <input type="text" id="spellInput" placeholder="請輸入英文..." autocomplete="off">
         <br>
-        <input type="text" id="spellInput" placeholder="請輸入聽到的英文..." autocomplete="off">
-        <br>
         
-        <button onclick="checkAnswer()">提交答案</button>
+        <button id="submitBtn" onclick="checkAnswer()">確定</button>
         
         <div id="feedbackMessage"></div>
-        
-        <button id="nextBtn" class="hidden" onclick="nextWord()">下一題 ➡️</button>
     </div>
 </div>
 
 <script>
     let words = [];
     let currentIndex = 0;
+    let learningStage = 0; // 0: 認字, 1: 重組, 2: 默寫
 
-    // 網頁載入時，檢查是否有之前儲存的生字
+    const stageNames = [
+        "第一關：眼望望，跟住打 👀", 
+        "第二關：拆字謎，重組它 🧩", 
+        "第三關：靠記憶，自己默 🧠"
+    ];
+
     window.onload = function() {
         const savedWords = localStorage.getItem('dictationWords');
         if (savedWords) {
@@ -120,78 +160,124 @@
         }
     };
 
-    // 儲存生字並切換到練習模式
     function saveWords() {
         const rawText = document.getElementById('wordInput').value;
         if (!rawText.trim()) {
             alert("請先輸入生字！");
             return;
         }
-        // 將輸入的文字儲存到瀏覽器
         localStorage.setItem('dictationWords', rawText);
-        
-        // 分割字串（支援逗號或換行），並移除空白
         words = rawText.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
         
         if (words.length > 0) {
             currentIndex = 0;
+            learningStage = 0;
             switchMode('kid');
             updateUI();
         }
     }
 
-    // 語音播放功能 (使用瀏覽器內建 Web Speech API)
     function speakWord() {
         if (words.length === 0) return;
-        const wordToSpeak = words[currentIndex];
-        const utterance = new SpeechSynthesisUtterance(wordToSpeak);
-        utterance.lang = 'en-GB'; // 使用英式英語發音，若想用美式可改為 'en-US'
-        utterance.rate = 0.8; // 稍微放慢語速，方便小朋友聽清楚
+        const utterance = new SpeechSynthesisUtterance(words[currentIndex]);
+        utterance.lang = 'en-GB'; 
+        utterance.rate = 0.8; 
         window.speechSynthesis.speak(utterance);
     }
 
-    // 檢查答案
+    // 將單字字母打亂的函數
+    function scrambleWord(word) {
+        // 如果是句子（有空格），暫時不打亂，直接返回原字或稍微處理
+        if(word.includes(" ")) return word; 
+        
+        let shuffled = word.split('').sort(function(){return 0.5-Math.random()}).join(' - ');
+        // 確保打亂後的字不會跟原字一樣
+        while(shuffled.replace(/ - /g, '') === word && word.length > 1) {
+            shuffled = word.split('').sort(function(){return 0.5-Math.random()}).join(' - ');
+        }
+        return shuffled;
+    }
+
     function checkAnswer() {
         const userInput = document.getElementById('spellInput').value.trim().toLowerCase();
         const correctAnswer = words[currentIndex].toLowerCase();
         const feedbackMessage = document.getElementById('feedbackMessage');
-        const nextBtn = document.getElementById('nextBtn');
+        const inputField = document.getElementById('spellInput');
 
         if (userInput === correctAnswer) {
-            feedbackMessage.innerHTML = "🎉 答對了！太棒了！";
+            feedbackMessage.innerHTML = "✨ 非常好！";
             feedbackMessage.className = "correct";
-            nextBtn.classList.remove('hidden'); // 顯示下一題按鈕
+            
+            // 答對後，進入下一個學習階段
+            learningStage++;
+            
+            setTimeout(() => {
+                if (learningStage > 2) {
+                    // 三關都過了，換下一個字
+                    currentIndex++;
+                    learningStage = 0;
+                }
+                updateUI();
+            }, 1000); // 等待1秒讓小朋友看到「非常好」的讚美
+
         } else {
-            feedbackMessage.innerHTML = "❌ 拼錯囉，再試一次！";
+            feedbackMessage.innerHTML = "🤔 哎呀，差一點點，再看清楚試一次！";
             feedbackMessage.className = "wrong";
-            nextBtn.classList.add('hidden');
+            inputField.value = ""; // 清空讓小朋友重打
+            inputField.focus();
         }
     }
 
-    // 進入下一題
-    function nextWord() {
-        currentIndex++;
-        if (currentIndex < words.length) {
-            updateUI();
-        } else {
-            document.getElementById('progressText').innerText = "✅ 完成所有挑戰！";
-            document.getElementById('feedbackMessage').innerHTML = "🌟 恭喜你完成了今天的默書！";
-            document.getElementById('spellInput').classList.add('hidden');
-            document.getElementById('nextBtn').classList.add('hidden');
-        }
-    }
-
-    // 更新畫面顯示
     function updateUI() {
-        document.getElementById('progressText').innerText = `第 ${currentIndex + 1} / ${words.length} 題`;
-        document.getElementById('spellInput').value = "";
-        document.getElementById('spellInput').classList.remove('hidden');
+        if (currentIndex >= words.length) {
+            document.getElementById('progressText').innerText = "✅ 完成所有詞語！";
+            document.getElementById('stageBadge').className = "hidden";
+            document.getElementById('hintBox').innerHTML = "🎉 太厲害了！你完成了今天的溫習！";
+            document.getElementById('spellInput').classList.add('hidden');
+            document.getElementById('submitBtn').classList.add('hidden');
+            document.getElementById('feedbackMessage').innerHTML = "";
+            return;
+        }
+
+        const currentWord = words[currentIndex];
+        
+        // 更新進度與階段標籤
+        document.getElementById('progressText').innerText = `詞語進度：${currentIndex + 1} / ${words.length}`;
+        const badge = document.getElementById('stageBadge');
+        badge.innerText = stageNames[learningStage];
+        badge.className = `stage-badge stage-${learningStage}`;
+        
+        // 根據不同學習階段，顯示不同的提示
+        const hintBox = document.getElementById('hintBox');
+        if (learningStage === 0) {
+            hintBox.innerText = currentWord; // 第一關：顯示原字
+        } else if (learningStage === 1) {
+            hintBox.innerText = scrambleWord(currentWord); // 第二關：顯示打亂的字母
+        } else if (learningStage === 2) {
+            hintBox.innerText = "❓❓❓"; // 第三關：隱藏提示
+        }
+
+        // 重置輸入框
+        const inputField = document.getElementById('spellInput');
+        inputField.value = "";
+        inputField.classList.remove('hidden');
+        inputField.focus();
+        
         document.getElementById('feedbackMessage').innerHTML = "";
-        document.getElementById('nextBtn').classList.add('hidden');
-        speakWord(); // 自動朗讀新題目
+        document.getElementById('submitBtn').classList.remove('hidden');
+        
+        // 每進入新的一關，自動讀出聲音
+        speakWord(); 
     }
 
-    // 切換介面模式
+    // 支援按 Enter 鍵提交答案
+    document.getElementById("spellInput").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            checkAnswer();
+        }
+    });
+
     function switchMode(mode) {
         if (mode === 'kid') {
             document.getElementById('parentMode').classList.add('hidden');
@@ -199,7 +285,6 @@
         } else {
             document.getElementById('parentMode').classList.remove('hidden');
             document.getElementById('kidMode').classList.add('hidden');
-            // 停止任何正在播放的語音
             window.speechSynthesis.cancel();
         }
     }
