@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動英文溫習小助手</title>
+    <title>互動英文溫習小助手 - 詞語升級版</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 改用較活潑的字體 */
             background-color: #e8f4f8;
             color: #333;
             text-align: center;
@@ -31,25 +31,37 @@
             font-weight: bold;
             color: white;
             margin-bottom: 15px;
+            font-size: 18px;
         }
         .stage-0 { background-color: #3498db; } /* 認字 */
         .stage-1 { background-color: #9b59b6; } /* 重組 */
         .stage-2 { background-color: #e74c3c; } /* 默寫 */
 
-        /* 提示區（顯示單字或打亂的字母） */
+        /* 提示區升級 (大字體與拼音間距) */
         #hintBox {
-            font-size: 36px;
+            font-size: 56px; /* 放大字體 */
             font-weight: bold;
-            letter-spacing: 5px;
-            color: #2c3e50;
-            background-color: #f1f2f6;
+            letter-spacing: 8px; /* 增加字母間距，方便辨識 */
+            background-color: #fff9e6; /* 溫和的淺黃色背景 */
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 15px;
             margin: 20px 0;
-            min-height: 50px;
+            min-height: 70px;
+            border: 3px dashed #f1c40f;
         }
 
-        /* 按鈕設計 */
+        /* 母音與子音顏色 (由 JavaScript 動態加入) */
+        .vowel { color: #e74c3c; }    /* 紅色母音 */
+        .consonant { color: #2980b9; } /* 藍色子音 */
+
+        /* 連續打三次的進度燈號 */
+        #repeatDots {
+            font-size: 24px;
+            margin-bottom: 10px;
+            letter-spacing: 5px;
+        }
+
+        /* 按鈕與輸入框設計 (維持圓潤可愛風格) */
         button {
             background-color: #2ecc71;
             color: white;
@@ -67,7 +79,6 @@
         .btn-voice:hover { background-color: #d68910; }
         .btn-back { background-color: #95a5a6; font-size: 14px; padding: 8px 15px;}
         
-        /* 輸入框設計 */
         textarea {
             width: 90%;
             height: 100px;
@@ -80,25 +91,24 @@
         input[type="text"] {
             width: 80%;
             padding: 15px;
-            font-size: 24px;
+            font-size: 32px; /* 放大輸入字體 */
             text-align: center;
             border-radius: 10px;
             border: 3px solid #3498db;
             margin: 10px 0;
             outline: none;
+            font-weight: bold;
         }
         input[type="text"]:focus { border-color: #2ecc71; }
         
-        /* 回饋訊息 */
         #feedbackMessage {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             margin: 15px 0;
-            min-height: 30px;
+            min-height: 35px;
         }
         .correct { color: #2ecc71; }
         .wrong { color: #e74c3c; }
-        
         #progressText { color: #7f8c8d; font-size: 16px; margin-bottom: 10px; font-weight: bold;}
     </style>
 </head>
@@ -111,7 +121,7 @@
     <div id="parentMode">
         <h2>✏️ 學習清單設定</h2>
         <p>請輸入今天要溫習的生字（用逗號或換行隔開）：</p>
-        <textarea id="wordInput" placeholder="例如: apple, banana, elephant"></textarea><br>
+        <textarea id="wordInput" placeholder="例如: apple, beautiful, elephant"></textarea><br>
         <button onclick="saveWords()">💾 儲存並開始溫習</button>
     </div>
 
@@ -125,12 +135,14 @@
         <!-- 當前學習階段標籤 -->
         <div id="stageBadge" class="stage-badge stage-0">第一關：眼望望，跟住打</div>
         
-        <!-- 語音按鈕 -->
+        <!-- 三次輸入進度燈號 (只有第一關顯示) -->
+        <div id="repeatDots"></div>
+
         <div>
             <button class="btn-voice" onclick="speakWord()">🔊 聽讀音</button>
         </div>
 
-        <!-- 視覺提示區 (顯示原字、打亂的字，或隱藏) -->
+        <!-- 視覺提示區 -->
         <div id="hintBox">APPLE</div>
         
         <input type="text" id="spellInput" placeholder="請輸入英文..." autocomplete="off">
@@ -146,6 +158,7 @@
     let words = [];
     let currentIndex = 0;
     let learningStage = 0; // 0: 認字, 1: 重組, 2: 默寫
+    let typingCount = 0;   // 記錄第一關打了幾次 (目標 3 次)
 
     const stageNames = [
         "第一關：眼望望，跟住打 👀", 
@@ -172,6 +185,7 @@
         if (words.length > 0) {
             currentIndex = 0;
             learningStage = 0;
+            typingCount = 0;
             switchMode('kid');
             updateUI();
         }
@@ -185,17 +199,44 @@
         window.speechSynthesis.speak(utterance);
     }
 
-    // 將單字字母打亂的函數
+    // 將字母分色 (母音紅色，子音藍色)
+    function formatPhonicsWord(word) {
+        if(word.includes(" ")) return word; // 如果是句子暫不處理
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+        let formatted = '';
+        for (let char of word) {
+            if (vowels.includes(char.toLowerCase())) {
+                formatted += `<span class="vowel">${char}</span>`;
+            } else if (/[a-zA-Z]/.test(char)) {
+                formatted += `<span class="consonant">${char}</span>`;
+            } else {
+                formatted += char; // 處理連字號等符號
+            }
+        }
+        return formatted;
+    }
+
     function scrambleWord(word) {
-        // 如果是句子（有空格），暫時不打亂，直接返回原字或稍微處理
         if(word.includes(" ")) return word; 
-        
         let shuffled = word.split('').sort(function(){return 0.5-Math.random()}).join(' - ');
-        // 確保打亂後的字不會跟原字一樣
         while(shuffled.replace(/ - /g, '') === word && word.length > 1) {
             shuffled = word.split('').sort(function(){return 0.5-Math.random()}).join(' - ');
         }
         return shuffled;
+    }
+
+    function updateRepeatDots() {
+        const dotsContainer = document.getElementById('repeatDots');
+        if (learningStage === 0) {
+            dotsContainer.style.display = "block";
+            let dots = "";
+            for(let i=0; i<3; i++) {
+                dots += (i < typingCount) ? "🟢" : "⚪";
+            }
+            dotsContainer.innerText = dots;
+        } else {
+            dotsContainer.style.display = "none";
+        }
     }
 
     function checkAnswer() {
@@ -205,25 +246,42 @@
         const inputField = document.getElementById('spellInput');
 
         if (userInput === correctAnswer) {
-            feedbackMessage.innerHTML = "✨ 非常好！";
-            feedbackMessage.className = "correct";
+            inputField.value = ""; // 先清空輸入框
             
-            // 答對後，進入下一個學習階段
-            learningStage++;
+            // 第一關：需要打對 3 次
+            if (learningStage === 0) {
+                typingCount++;
+                updateRepeatDots();
+                
+                if (typingCount < 3) {
+                    feedbackMessage.innerHTML = `✨ 很好！還有 ${3 - typingCount} 次！`;
+                    feedbackMessage.className = "correct";
+                    inputField.focus();
+                    return; // 還沒滿3次，繼續留在第一關
+                } else {
+                    typingCount = 0; // 滿3次，歸零準備下一個字用
+                    learningStage++; // 升級到第二關
+                }
+            } else {
+                // 第二關、第三關只要打對 1 次就過關
+                learningStage++;
+            }
+
+            feedbackMessage.innerHTML = "🎉 太棒了！過關！";
+            feedbackMessage.className = "correct";
             
             setTimeout(() => {
                 if (learningStage > 2) {
-                    // 三關都過了，換下一個字
                     currentIndex++;
                     learningStage = 0;
                 }
                 updateUI();
-            }, 1000); // 等待1秒讓小朋友看到「非常好」的讚美
+            }, 1000);
 
         } else {
             feedbackMessage.innerHTML = "🤔 哎呀，差一點點，再看清楚試一次！";
             feedbackMessage.className = "wrong";
-            inputField.value = ""; // 清空讓小朋友重打
+            inputField.value = ""; 
             inputField.focus();
         }
     }
@@ -235,29 +293,29 @@
             document.getElementById('hintBox').innerHTML = "🎉 太厲害了！你完成了今天的溫習！";
             document.getElementById('spellInput').classList.add('hidden');
             document.getElementById('submitBtn').classList.add('hidden');
+            document.getElementById('repeatDots').classList.add('hidden');
             document.getElementById('feedbackMessage').innerHTML = "";
             return;
         }
 
         const currentWord = words[currentIndex];
         
-        // 更新進度與階段標籤
         document.getElementById('progressText').innerText = `詞語進度：${currentIndex + 1} / ${words.length}`;
         const badge = document.getElementById('stageBadge');
         badge.innerText = stageNames[learningStage];
         badge.className = `stage-badge stage-${learningStage}`;
         
-        // 根據不同學習階段，顯示不同的提示
         const hintBox = document.getElementById('hintBox');
         if (learningStage === 0) {
-            hintBox.innerText = currentWord; // 第一關：顯示原字
+            hintBox.innerHTML = formatPhonicsWord(currentWord); // 使用多色 Phonics 顯示
         } else if (learningStage === 1) {
-            hintBox.innerText = scrambleWord(currentWord); // 第二關：顯示打亂的字母
+            hintBox.innerText = scrambleWord(currentWord);
         } else if (learningStage === 2) {
-            hintBox.innerText = "❓❓❓"; // 第三關：隱藏提示
+            hintBox.innerText = "❓❓❓"; 
         }
 
-        // 重置輸入框
+        updateRepeatDots(); // 更新圈圈燈號
+
         const inputField = document.getElementById('spellInput');
         inputField.value = "";
         inputField.classList.remove('hidden');
@@ -266,11 +324,9 @@
         document.getElementById('feedbackMessage').innerHTML = "";
         document.getElementById('submitBtn').classList.remove('hidden');
         
-        // 每進入新的一關，自動讀出聲音
         speakWord(); 
     }
 
-    // 支援按 Enter 鍵提交答案
     document.getElementById("spellInput").addEventListener("keypress", function(event) {
         if (event.key === "Enter") {
             event.preventDefault();
