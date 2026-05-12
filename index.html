@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動英文溫習小助手 - 創世神方塊版</title>
+    <title>互動英文溫習小助手 - Shino 防禦戰</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         /* 模擬像素遊戲的字體與背景 */
@@ -13,12 +13,11 @@
         }
         .container { 
             max-width: 650px; margin: 0 auto; background: #8B8B8B; padding: 20px; 
-            border: 4px solid #555555; box-shadow: inset -4px -4px 0px 0px #333, inset 4px 4px 0px 0px #ccc; position: relative; 
+            border: 4px solid #55555; box-shadow: inset -4px -4px 0px 0px #333, inset 4px 4px 0px 0px #ccc; position: relative; 
         }
         h1 { color: #55FF55; margin-top: 5px; font-size: 28px; text-shadow: 2px 2px #000;}
         .hidden { display: none !important; }
         
-        /* 任務切換分頁 (石頭方塊質感) */
         .tab-container { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; }
         .tab-btn { 
             background-color: #707070; color: white; padding: 10px 5px; cursor: pointer; font-size: 16px; font-weight: bold; 
@@ -27,14 +26,13 @@
         .tab-btn.active { background-color: #55FF55; color: #000; box-shadow: inset 2px 2px 0px #AAFFAA; }
         .tab-quiz.active { background-color: #AA00AA; color: #FFF; box-shadow: inset 2px 2px 0px #FF55FF; }
 
-        /* 遊戲資訊列 (物品欄風格) */
         .game-hud { 
             display: flex; justify-content: space-between; background-color: #333; padding: 10px 20px; 
             margin-bottom: 15px; font-size: 20px; font-weight: bold; border: 4px solid #555; color: #FFF; 
         }
         .player-hp { color: #FF5555; font-size: 22px; letter-spacing: 2px;}
 
-        /* 戰鬥區設計 (藍天與草皮) */
+        /* 戰鬥區設計 */
         .battle-arena { 
             display: flex; justify-content: space-between; align-items: flex-end; 
             background: linear-gradient(to bottom, #7EC0EE 60%, #3CB371 60%, #8B4513 100%); 
@@ -47,31 +45,34 @@
         .monster-sprite { font-size: 80px; }
         .boss-sprite { font-size: 100px; filter: drop-shadow(0 0 10px #FF55FF); }
 
-        /* 建築區 (堆疊方塊) */
+        /* 建築區 (加寬的牆壁) */
         #houseContainer {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: flex; flex-direction: column-reverse; align-items: center; justify-content: flex-start;
-            width: 80px; height: 120px; z-index: 3;
+            display: flex; flex-wrap: wrap-reverse; align-content: flex-start; justify-content: center;
+            width: 200px; /* 加寬為 5 格 */
+            height: 120px; z-index: 3;
         }
-        .mc-block { font-size: 40px; margin-top: -15px; animation: dropIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .mc-block { 
+            font-size: 40px; width: 40px; height: 40px; line-height: 40px; 
+            margin-top: -5px; animation: dropIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
 
-        /* 建築進度條 */
-        .hp-label { font-size: 14px; font-weight: bold; color: #FFF; margin-bottom: 2px; text-shadow: 2px 2px #000;}
+        .hp-label { font-size: 16px; font-weight: bold; color: #FFF; margin-bottom: 2px; text-shadow: 2px 2px #000;}
         .hp-bar-container { width: 100px; height: 14px; background-color: #333; margin-bottom: 5px; border: 2px solid #000; overflow: hidden; }
         .hp-fill { height: 100%; width: 0%; transition: width 0.3s ease; background-color: #8B4513; border-top: 4px solid #55FF55; }
 
-        /* 動畫 */
         @keyframes dropIn { 0% { transform: translateY(-50px) scale(1.5); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
         @keyframes hitShake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-15px); } }
         @keyframes playerHurt { 0%, 100% { filter: none; transform: translateX(0); } 50% { filter: drop-shadow(0 0 15px red) sepia(1) hue-rotate(-50deg); transform: translateX(-10px); } }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
+        @keyframes monsterThrow { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-20px) scale(1.1); } }
 
         .animate-hit { animation: hitShake 0.4s; }
         .animate-hurt { animation: playerHurt 0.4s; }
+        .animate-throw { animation: monsterThrow 0.3s; }
         .floating-text { position: absolute; font-size: 28px; font-weight: bold; z-index: 10; pointer-events: none; animation: floatUp 1s ease-out forwards; text-shadow: 2px 2px #000; }
         .text-gain { color: #55FF55; } .text-loss { color: #FF5555; }
 
-        /* 提示與輸入區 */
         .stage-badge { display: inline-block; padding: 8px 15px; font-weight: bold; color: white; margin-bottom: 10px; font-size: 16px; border: 2px solid #000; }
         .stage-0 { background-color: #3333AA; } .stage-1 { background-color: #AA5500; } .stage-2 { background-color: #AA00AA; } .stage-3 { background-color: #AA0000; }
         .stage-quiz { background-color: #FF55FF; color: #000; }
@@ -88,7 +89,6 @@
         .input-group { background: #555; padding: 15px; border: 4px solid #333; margin-bottom: 15px;}
         .input-group h3 { margin: 0 0 10px 0; color: #55FF55; text-align: left; padding-left: 20px; text-shadow: 1px 1px #000;}
         
-        /* Minecraft 風格按鈕 */
         button { 
             background-color: #707070; color: white; border: 4px solid #333; padding: 12px 25px; 
             font-size: 18px; cursor: pointer; font-weight: bold; font-family: 'Courier New', Courier, monospace;
@@ -113,7 +113,7 @@
 <body>
 
 <div class="container">
-    <h1>⚔️ 方塊守護戰</h1>
+    <h1>⚔️ Shino 方塊守護戰</h1>
 
     <div id="parentMode">
         <p>準備建築材料（溫習內容）：</p>
@@ -125,7 +125,7 @@
             <h3 style="color: #55FFFF;">💬 句子區 (每行一句)</h3>
             <textarea id="sentenceInput" placeholder="I have a pen.&#10;She is eating an apple."></textarea>
         </div>
-        <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px; background-color: #55FF55; color: #000; text-shadow: none;">⚔️ 開始建造！</button>
+        <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px; background-color: #55FF55; color: #000; text-shadow: none;">⚔️ 開始建造防禦牆！</button>
     </div>
 
     <div id="kidMode" class="hidden">
@@ -143,11 +143,11 @@
 
         <div class="battle-arena" id="arena">
             <div class="entity-area">
-                <div class="hp-label">史蒂夫</div>
-                <div id="player" class="sprite">🧑‍🌾</div>
+                <div class="hp-label">Shino</div>
+                <div id="player" class="sprite">👧</div>
             </div>
             
-            <!-- 建築中的房子 -->
+            <!-- 加寬的防禦牆 -->
             <div id="houseContainer"></div>
 
             <div class="entity-area">
@@ -187,9 +187,9 @@
     let coins = 0;
     let playerLevel = 1;
     let playerCurrentHp = 3;
-    let buildProgress = 0; // 取代怪獸血量，0 -> 100%
-    const monsterList = ['🐷', '🧟‍♂️', '🕷️', '💀', '🏹']; // 豬豬, 殭屍, 蜘蛛, 骷髏
-    const bossList = ['🐉', '🌋', '👾']; // 終界龍
+    let buildProgress = 0; 
+    const monsterList = ['🐷', '🧟‍♂️', '🕷️', '💀', '🏹']; 
+    const bossList = ['🐉', '🌋', '👾']; 
     let currentMonsterIndex = 0;
 
     const stageNames = {
@@ -307,37 +307,77 @@
         if (playerCurrentHp > 0) {
             playerCurrentHp--; updateHpUI(); showFloatingText("-1 ❤️", 'loss', 'player');
             const playerEl = document.getElementById('player'); 
-            const monsterEl = document.getElementById('monster');
-            // 怪獸攻擊動畫
-            monsterEl.classList.remove('animate-hit'); void monsterEl.offsetWidth; monsterEl.classList.add('animate-hit');
-            // 玩家受傷動畫
             playerEl.classList.remove('animate-hurt'); void playerEl.offsetWidth; playerEl.classList.add('animate-hurt');
-            if (playerCurrentHp === 0) { setTimeout(() => { alert("史蒂夫倒下了！滿血重生繼續蓋屋！"); playerCurrentHp = 3; updateHpUI(); }, 500); }
+            if (playerCurrentHp === 0) { setTimeout(() => { alert("Shino 倒下了！吃顆金蘋果滿血重生繼續蓋屋！"); playerCurrentHp = 3; updateHpUI(); }, 500); }
         }
+        isAnimating = false; // 解除鎖定
+    }
+
+    // 怪獸投石攻擊動畫
+    function triggerMonsterAttack() {
+        isAnimating = true; // 鎖定操作
+        const arena = document.getElementById('arena');
+        const player = document.getElementById('player');
+        const monster = document.getElementById('monster');
+        
+        // 怪獸攻擊動作
+        monster.classList.remove('animate-throw'); void monster.offsetWidth; monster.classList.add('animate-throw');
+
+        // 創造石頭
+        const stone = document.createElement('div');
+        stone.innerText = '🪨';
+        stone.style.position = 'absolute';
+        stone.style.fontSize = '35px';
+        stone.style.zIndex = '10';
+        
+        // 計算拋物線軌跡
+        const mRect = monster.getBoundingClientRect();
+        const aRect = arena.getBoundingClientRect();
+        const pRect = player.getBoundingClientRect();
+        
+        const startX = mRect.left - aRect.left - 20;
+        const startY = mRect.top - aRect.top + 20;
+        const endX = pRect.left - aRect.left;
+        const endY = pRect.top - aRect.top + 20;
+
+        stone.style.left = startX + 'px';
+        stone.style.top = startY + 'px';
+        arena.appendChild(stone);
+
+        // 飛行與旋轉動畫
+        const anim = stone.animate([
+            { transform: 'translate(0, 0) rotate(0deg)' },
+            { transform: `translate(${(endX - startX)/2}px, -80px) rotate(180deg)` },
+            { transform: `translate(${endX - startX}px, ${endY - startY}px) rotate(360deg)` }
+        ], { duration: 400, easing: 'ease-in-out' });
+
+        anim.onfinish = () => {
+            stone.remove();
+            playerTakeDamage(); // 砸中後扣血
+        };
     }
 
     function buildHouse() {
         setTimeout(() => {
-            // 放置方塊
             const house = document.getElementById('houseContainer');
             const block = document.createElement('div');
             block.className = 'mc-block';
-            block.innerText = ['🧱', '🪵', '🟫', '🪨'][Math.floor(Math.random() * 4)]; // 隨機建材
+            block.innerText = ['🧱', '🪵', '🟫', '🪨'][Math.floor(Math.random() * 4)]; 
             house.appendChild(block);
 
-            let progressGain = activeTab === 'quiz' ? 50 : 34; let coinGain = activeTab === 'quiz' ? 2 : 1;
+            let progressGain = activeTab === 'quiz' ? 50 : 25; // 稍微調降進度，讓牆可以蓋多一點方塊
+            let coinGain = activeTab === 'quiz' ? 2 : 1;
             showFloatingText(`+${coinGain} 💎`, 'gain', 'player');
             
             buildProgress += progressGain; coins += coinGain; document.getElementById('coinScore').innerText = coins;
             
             if (buildProgress >= 100) {
-                // 屋子蓋好，阻擋怪獸
                 buildProgress = 0; playerLevel++; document.getElementById('playerLevel').innerText = playerLevel;
-                document.getElementById('feedbackMessage').innerHTML += " <br>🏰 屋子蓋好了！成功阻擋攻擊！";
+                document.getElementById('feedbackMessage').innerHTML += " <br>🏰 防禦牆築起了！成功阻擋怪獸一波攻擊！";
                 triggerFireworks(); 
                 
                 setTimeout(() => {
-                    house.innerHTML = ""; // 清空房子準備下一波
+                    house.innerHTML = ""; // 清空牆壁準備下一關
                     const monster = document.getElementById('monster');
                     if(activeTab === 'quiz') monster.innerText = bossList[Math.floor(Math.random() * bossList.length)];
                     else { currentMonsterIndex = (currentMonsterIndex + 1) % monsterList.length; monster.innerText = monsterList[currentMonsterIndex]; }
@@ -367,12 +407,11 @@
                 let currentStage = learningStage[activeTab];
                 let targetCount = 1;
                 
-                // ⭐ 句子區和詞語區的第一關都改為 3 次
                 if (activeTab === 'word') {
                     if (currentStage === 0) targetCount = 3; 
                     if (currentStage === 1) targetCount = 2; 
                 } else if (activeTab === 'sentence') {
-                    if (currentStage === 0) targetCount = 3; // 句子第一關增加為 3 次
+                    if (currentStage === 0) targetCount = 3; 
                 }
 
                 typingCount[activeTab]++;
@@ -397,8 +436,10 @@
                 }, 1000);
             }
         } else {
-            feedbackMessage.innerHTML = "💦 哎呀，拼錯了！豬豬發動攻擊！(扣除1顆愛心)";
-            feedbackMessage.className = "wrong"; playerTakeDamage(); inputField.focus();
+            feedbackMessage.innerHTML = "💦 哎呀，拼錯了！豬豬發動落石攻擊！";
+            feedbackMessage.className = "wrong"; 
+            inputField.focus();
+            triggerMonsterAttack(); // 觸發拋物線石頭攻擊
         }
     }
 
@@ -431,7 +472,7 @@
             if (activeTab === 'word' && learningStage.word === 1) maxDots = 2;
             if (activeTab === 'sentence' && learningStage.sentence === 0) maxDots = 3;
 
-            for(let i=0; i<maxDots; i++) dots += (i < typingCount[activeTab]) ? "🟩" : "⬜"; // 改用方塊圖示
+            for(let i=0; i<maxDots; i++) dots += (i < typingCount[activeTab]) ? "🟩" : "⬜"; 
             dotsContainer.innerText = dots;
         } else { dotsContainer.style.display = "none"; }
     }
