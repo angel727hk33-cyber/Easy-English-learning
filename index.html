@@ -3,44 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動英文溫習小助手 - 終極測驗版</title>
+    <title>互動英文溫習小助手 - 句型強化版</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body {
-            font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e272e; color: #ecf0f1; text-align: center; padding: 10px; margin: 0; overflow-x: hidden;
-        }
-        .container {
-            max-width: 650px; margin: 0 auto; background: #2c3e50; padding: 20px;
-            border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); position: relative;
-        }
+        body { font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e272e; color: #ecf0f1; text-align: center; padding: 10px; margin: 0; overflow-x: hidden; }
+        .container { max-width: 650px; margin: 0 auto; background: #2c3e50; padding: 20px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); position: relative; }
         h1 { color: #f1c40f; margin-top: 5px; font-size: 28px;}
         .hidden { display: none !important; }
         
-        /* 任務切換分頁 */
         .tab-container { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; }
-        .tab-btn {
-            background-color: #7f8c8d; color: white; padding: 10px 5px; border-radius: 10px 10px 0 0;
-            cursor: pointer; font-size: 16px; font-weight: bold; border: none; flex-grow: 1; transition: 0.3s;
-        }
+        .tab-btn { background-color: #7f8c8d; color: white; padding: 10px 5px; border-radius: 10px 10px 0 0; cursor: pointer; font-size: 16px; font-weight: bold; border: none; flex-grow: 1; transition: 0.3s; }
         .tab-btn.active { background-color: #34495e; color: #f1c40f; border-bottom: 3px solid #f1c40f; }
         .tab-quiz.active { background-color: #4a235a; color: #ff9ff3; border-bottom: 3px solid #ff9ff3; }
 
-        /* 遊戲資訊列 */
-        .game-hud {
-            display: flex; justify-content: space-between; background-color: #34495e; padding: 10px 20px;
-            border-radius: 0 0 10px 10px; margin-bottom: 15px; font-size: 20px; font-weight: bold;
-            border: 2px solid #f39c12; border-top: none; color: #f1c40f;
-        }
+        .game-hud { display: flex; justify-content: space-between; background-color: #34495e; padding: 10px 20px; border-radius: 0 0 10px 10px; margin-bottom: 15px; font-size: 20px; font-weight: bold; border: 2px solid #f39c12; border-top: none; color: #f1c40f; }
         .player-hp { color: #e74c3c; font-size: 22px; letter-spacing: 2px;}
 
-        /* 戰鬥區設計 */
-        .battle-arena {
-            display: flex; justify-content: space-around; align-items: flex-end;
-            background: linear-gradient(to bottom, #87CEEB 0%, #a2d149 100%);
-            height: 180px; border-radius: 15px; margin-bottom: 20px; padding: 10px;
-            border: 3px solid #bdc3c7; position: relative;
-        }
+        .battle-arena { display: flex; justify-content: space-around; align-items: flex-end; background: linear-gradient(to bottom, #87CEEB 0%, #a2d149 100%); height: 180px; border-radius: 15px; margin-bottom: 20px; padding: 10px; border: 3px solid #bdc3c7; position: relative; }
         .arena-quiz { background: linear-gradient(to bottom, #2c3e50 0%, #8e44ad 100%); border-color: #ff9ff3;}
         
         .entity-area { display: flex; flex-direction: column; align-items: center; position: relative; }
@@ -48,13 +27,11 @@
         .monster-sprite { font-size: 90px; }
         .boss-sprite { font-size: 110px; filter: drop-shadow(0 0 10px #ff9ff3); }
 
-        /* 血條 */
         .hp-label { font-size: 12px; font-weight: bold; color: #2c3e50; margin-bottom: 2px; text-shadow: 1px 1px white;}
         .hp-bar-container { width: 100px; height: 12px; background-color: #c0392b; border-radius: 6px; margin-bottom: 5px; border: 2px solid #fff; overflow: hidden; }
         .hp-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
         .monster-hp { background-color: #2ecc71; }
 
-        /* 動畫 */
         @keyframes attackShake { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(30px) scale(1.1); } }
         @keyframes hitShake { 0%, 100% { transform: translateX(0) rotate(0deg); filter: brightness(1); } 25%, 75% { transform: translateX(-15px) rotate(-10deg); filter: brightness(2) drop-shadow(0 0 10px red); } }
         @keyframes playerHurt { 0%, 100% { filter: none; transform: translateX(0); } 50% { filter: drop-shadow(0 0 15px red); transform: translateX(-10px); } }
@@ -67,7 +44,6 @@
         .text-gain { color: #f1c40f; text-shadow: 2px 2px #d35400; }
         .text-loss { color: #e74c3c; text-shadow: 2px 2px #c0392b; }
 
-        /* 提示與輸入區 */
         .stage-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-weight: bold; color: white; margin-bottom: 10px; font-size: 16px; }
         .stage-0 { background-color: #3498db; } .stage-1 { background-color: #f39c12; } .stage-2 { background-color: #9b59b6; } .stage-3 { background-color: #e74c3c; }
         .stage-quiz { background-color: #ff9ff3; color: #2c3e50; border: 2px solid white;}
@@ -75,7 +51,7 @@
         #hintBox { font-size: 48px; font-weight: bold; letter-spacing: 5px; background-color: #ecf0f1; color: #2c3e50; padding: 15px; border-radius: 15px; margin: 10px 0; min-height: 60px; border: 3px dashed #3498db; word-wrap: break-word; }
         .sentence-mode #hintBox { font-size: 32px; letter-spacing: 2px; }
         .vowel { color: #e74c3c; } .consonant { color: #2980b9; } 
-        .blank-space { color: #e67e22; letter-spacing: 2px; } 
+        .blank-space { color: #e67e22; letter-spacing: 2px; font-weight: bold;} 
 
         textarea { width: 85%; height: 70px; padding: 10px; font-size: 16px; border-radius: 10px; margin-bottom: 15px; }
         .input-group { background: #34495e; padding: 15px; border-radius: 15px; margin-bottom: 15px;}
@@ -86,7 +62,7 @@
         .btn-voice { background-color: #f39c12; border-radius: 50px; box-shadow: 0 4px 0 #d68910;}
         .btn-back { background-color: #95a5a6; font-size: 14px; padding: 8px 15px; box-shadow: 0 4px 0 #7f8c8d; margin-bottom:10px;}
         
-        input[type="text"] { width: 85%; padding: 15px; font-size: 28px; text-align: center; border-radius: 10px; border: 3px solid #f1c40f; margin: 10px 0; outline: none; font-weight: bold; }
+        input[type="text"] { width: 85%; padding: 15px; font-size: 24px; text-align: center; border-radius: 10px; border: 3px solid #f1c40f; margin: 10px 0; outline: none; font-weight: bold; }
         input[type="text"]:focus { border-color: #e74c3c; }
         #feedbackMessage { font-size: 20px; font-weight: bold; margin: 10px 0; min-height: 30px; }
         .correct { color: #2ecc71; } .wrong { color: #e74c3c; }
@@ -107,7 +83,7 @@
         </div>
         <div class="input-group">
             <h3 style="color: #3498db;">💬 句子區 (每行一句)</h3>
-            <textarea id="sentenceInput" placeholder="I have a pen.&#10;She is reading."></textarea>
+            <textarea id="sentenceInput" placeholder="I have a pen.&#10;She is eating an apple."></textarea>
         </div>
         <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px;">⚔️ 開始挑戰！</button>
     </div>
@@ -172,9 +148,10 @@
     const bossList = ['👿', '💀', '👺', '🌋'];
     let currentMonsterIndex = 0;
 
+    // 句子的四階梯名字更新
     const stageNames = {
         word: ["第一關：睇清楚，跟住打 👀", "第二關：填空格，估下字 🕳️", "第三關：拆字謎，拼拼圖 🧩", "第四關：靠記憶，自己默 🧠"],
-        sentence: ["第一關：讀原句，照住打 👀", "第二關：字詞亂了，排番好 🧩", "第三關：聽讀音，全句默 🧠"]
+        sentence: ["第一關：睇原句，照住打 👀", "第二關：單字亂了，排番好 🧩", "第三關：字頭提示，記憶挑戰 🅰️", "第四關：聽讀音，全句默寫 🧠"]
     };
 
     window.onload = function() {
@@ -182,20 +159,42 @@
         if (localStorage.getItem('savedSentences')) document.getElementById('sentenceInput').value = localStorage.getItem('savedSentences');
     };
 
-    // 產生填空格字串
+    // 詞語填空產生器
     function generateFillBlank(word) {
         let arr = word.split('');
         let letters = [];
         for(let i=0; i<arr.length; i++) { if(/[a-zA-Z]/.test(arr[i])) letters.push(i); }
         if(letters.length <= 1) return word.replace(/[a-zA-Z]/, '_');
-        
         let numToHide = 1;
         if(letters.length >= 5) numToHide = 2;
         if(letters.length >= 7) numToHide = 3;
-        
         letters.sort(() => 0.5 - Math.random());
         for(let i=0; i<numToHide; i++) { arr[letters[i]] = '_'; }
         return arr.join(' ');
+    }
+
+    // ⭐ 新增：句子「首字母提示」產生器
+    function generateFirstLetterHint(sentence) {
+        let words = sentence.split(' ');
+        let hintedWords = words.map(word => {
+            let res = "";
+            let firstLetterFound = false;
+            for(let i=0; i<word.length; i++) {
+                let char = word[i];
+                if(/[a-zA-Z]/.test(char)) {
+                    if(!firstLetterFound) {
+                        res += char; // 保留第一個字母
+                        firstLetterFound = true;
+                    } else {
+                        res += '<span class="blank-space">_</span>'; // 其他字母變底線
+                    }
+                } else {
+                    res += char; // 保留標點符號
+                }
+            }
+            return res;
+        });
+        return hintedWords.join(' ');
     }
 
     function scrambleText(text, type) {
@@ -219,7 +218,6 @@
         
         const wArray = rawWords.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
         tasks.word = wArray.map(w => ({ text: w, fillHint: generateFillBlank(w) }));
-        
         tasks.sentence = rawSentences.split('\n').map(s => s.trim()).filter(s => s.length > 0).map(s => ({ text: s }));
 
         if (tasks.word.length === 0 && tasks.sentence.length === 0) { alert("請至少輸入一個詞語或句子！"); return; }
@@ -236,8 +234,7 @@
         currentIndex = { word: 0, sentence: 0, quiz: 0 };
         learningStage = { word: 0, sentence: 0 };
         typingCount = { word: 0, sentence: 0 };
-        playerCurrentHp = 3;
-        monsterHp = 100; 
+        playerCurrentHp = 3; monsterHp = 100; 
         
         activeTab = tasks.word.length > 0 ? 'word' : 'sentence';
         switchTab(activeTab);
@@ -251,8 +248,7 @@
         document.getElementById('tabSentence').classList.toggle('active', tabType === 'sentence');
         document.getElementById('tabQuiz').classList.toggle('active', tabType === 'quiz');
         
-        const arena = document.getElementById('arena');
-        const monster = document.getElementById('monster');
+        const arena = document.getElementById('arena'); const monster = document.getElementById('monster');
         if(tabType === 'quiz') {
             arena.classList.add('arena-quiz');
             monster.innerText = bossList[Math.floor(Math.random() * bossList.length)];
@@ -262,22 +258,16 @@
             monster.innerText = monsterList[currentMonsterIndex];
             monster.classList.remove('boss-sprite');
         }
-        
-        document.getElementById('feedbackMessage').innerHTML = "";
-        updateUI();
+        document.getElementById('feedbackMessage').innerHTML = ""; updateUI();
     }
 
     function showFloatingText(text, type, elementId) {
         const target = document.getElementById(elementId);
         const floatEl = document.createElement('div');
-        floatEl.className = `floating-text ${type === 'gain' ? 'text-gain' : 'text-loss'}`;
-        floatEl.innerText = text;
-        const rect = target.getBoundingClientRect();
-        const arenaRect = document.getElementById('arena').getBoundingClientRect();
-        floatEl.style.left = (rect.left - arenaRect.left + rect.width/2 - 20) + 'px';
-        floatEl.style.top = (rect.top - arenaRect.top - 20) + 'px';
-        document.getElementById('arena').appendChild(floatEl);
-        setTimeout(() => floatEl.remove(), 1000);
+        floatEl.className = `floating-text ${type === 'gain' ? 'text-gain' : 'text-loss'}`; floatEl.innerText = text;
+        const rect = target.getBoundingClientRect(); const arenaRect = document.getElementById('arena').getBoundingClientRect();
+        floatEl.style.left = (rect.left - arenaRect.left + rect.width/2 - 20) + 'px'; floatEl.style.top = (rect.top - arenaRect.top - 20) + 'px';
+        document.getElementById('arena').appendChild(floatEl); setTimeout(() => floatEl.remove(), 1000);
     }
 
     function triggerFireworks() { confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 }); }
@@ -291,11 +281,8 @@
     function playerTakeDamage() {
         if (playerCurrentHp > 0) {
             playerCurrentHp--; updateHpUI(); showFloatingText("-1 ❤️", 'loss', 'player');
-            const playerEl = document.getElementById('player');
-            playerEl.classList.remove('animate-hurt'); void playerEl.offsetWidth; playerEl.classList.add('animate-hurt');
-            if (playerCurrentHp === 0) {
-                setTimeout(() => { alert("力氣用盡了！滿血復活繼續挑戰！"); playerCurrentHp = 3; updateHpUI(); }, 500);
-            }
+            const playerEl = document.getElementById('player'); playerEl.classList.remove('animate-hurt'); void playerEl.offsetWidth; playerEl.classList.add('animate-hurt');
+            if (playerCurrentHp === 0) { setTimeout(() => { alert("力氣用盡了！滿血復活繼續挑戰！"); playerCurrentHp = 3; updateHpUI(); }, 500); }
         }
     }
 
@@ -305,26 +292,16 @@
         
         setTimeout(() => {
             monster.classList.remove('animate-hit'); void monster.offsetWidth; monster.classList.add('animate-hit');
-            
-            let dmg = activeTab === 'quiz' ? 50 : 34;
-            let coinGain = activeTab === 'quiz' ? 20 : 10;
-            
+            let dmg = activeTab === 'quiz' ? 50 : 34; let coinGain = activeTab === 'quiz' ? 20 : 10;
             showFloatingText(`+${coinGain} 🪙`, 'gain', 'monster');
-            monsterHp -= dmg; coins += coinGain;
-            document.getElementById('coinScore').innerText = coins;
+            monsterHp -= dmg; coins += coinGain; document.getElementById('coinScore').innerText = coins;
             if (coins > 0 && coins % 100 === 0) triggerFireworks();
             
             if (monsterHp <= 0) {
-                monsterHp = 100; playerLevel++;
-                document.getElementById('playerLevel').innerText = playerLevel;
-                if(activeTab === 'quiz') {
-                    monster.innerText = bossList[Math.floor(Math.random() * bossList.length)];
-                } else {
-                    currentMonsterIndex = (currentMonsterIndex + 1) % monsterList.length;
-                    monster.innerText = monsterList[currentMonsterIndex];
-                }
-                document.getElementById('feedbackMessage').innerHTML += " 💥怪獸被打敗了！升級！";
-                triggerFireworks(); 
+                monsterHp = 100; playerLevel++; document.getElementById('playerLevel').innerText = playerLevel;
+                if(activeTab === 'quiz') monster.innerText = bossList[Math.floor(Math.random() * bossList.length)];
+                else { currentMonsterIndex = (currentMonsterIndex + 1) % monsterList.length; monster.innerText = monsterList[currentMonsterIndex]; }
+                document.getElementById('feedbackMessage').innerHTML += " 💥怪獸被打敗了！升級！"; triggerFireworks(); 
             }
             updateHpUI(); isAnimating = false;
         }, 150);
@@ -344,44 +321,34 @@
             isAnimating = true; inputField.value = ""; attackMonster();
 
             if(activeTab === 'quiz') {
-                feedbackMessage.innerHTML = "🎯 完美擊中大魔王！";
-                feedbackMessage.className = "correct";
+                feedbackMessage.innerHTML = "🎯 完美擊中大魔王！"; feedbackMessage.className = "correct";
                 setTimeout(() => { currentIndex.quiz++; updateUI(); }, 1000);
             } else {
                 let currentStage = learningStage[activeTab];
                 let targetCount = 1;
                 
-                // 設定各關卡的過關次數要求
                 if (activeTab === 'word') {
-                    if (currentStage === 0) targetCount = 3; // 第一關：打3次
-                    if (currentStage === 1) targetCount = 2; // 第二關(填空格)：打2次
+                    if (currentStage === 0) targetCount = 3; 
+                    if (currentStage === 1) targetCount = 2; 
                 }
 
                 typingCount[activeTab]++;
 
                 if (typingCount[activeTab] < targetCount) {
                     feedbackMessage.innerHTML = `✨ 很好！還有 ${targetCount - typingCount[activeTab]} 次！`;
-                    feedbackMessage.className = "correct";
-                    inputField.focus(); 
-                    
-                    // 如果是詞語區的第二關，刷新一個全新的隨機空格提示！
+                    feedbackMessage.className = "correct"; inputField.focus(); 
                     if (activeTab === 'word' && currentStage === 1) {
                         tasks.word[currentIndex.word].fillHint = generateFillBlank(currentTaskText);
                         document.getElementById('hintBox').innerHTML = tasks.word[currentIndex.word].fillHint.replace(/_/g, '<span class="blank-space">_</span>');
                     }
-                    
-                    updateRepeatDots(); 
-                    return; 
+                    updateRepeatDots(); return; 
                 } else { 
-                    typingCount[activeTab] = 0; 
-                    learningStage[activeTab]++; 
+                    typingCount[activeTab] = 0; learningStage[activeTab]++; 
                 }
 
-                feedbackMessage.innerHTML = "🎯 完美命中！";
-                feedbackMessage.className = "correct";
-                
+                feedbackMessage.innerHTML = "🎯 完美命中！"; feedbackMessage.className = "correct";
                 setTimeout(() => {
-                    let maxStage = activeTab === 'word' ? 3 : 2;
+                    let maxStage = 3; // 詞語和句子現在都是 4 階 (maxStage = 3)
                     if (learningStage[activeTab] > maxStage) { currentIndex[activeTab]++; learningStage[activeTab] = 0; }
                     updateUI();
                 }, 1000);
@@ -411,16 +378,12 @@
 
     function updateRepeatDots() {
         const dotsContainer = document.getElementById('repeatDots');
-        // 只有詞語區的第一關(3次)和第二關(2次)需要顯示燈號
         if (activeTab === 'word' && (learningStage.word === 0 || learningStage.word === 1)) {
-            dotsContainer.style.display = "block"; 
-            let dots = "";
+            dotsContainer.style.display = "block"; let dots = "";
             let maxDots = learningStage.word === 0 ? 3 : 2;
             for(let i=0; i<maxDots; i++) dots += (i < typingCount.word) ? "🟢" : "⚪";
             dotsContainer.innerText = dots;
-        } else { 
-            dotsContainer.style.display = "none"; 
-        }
+        } else { dotsContainer.style.display = "none"; }
     }
 
     function updateUI() {
@@ -462,9 +425,11 @@
                 else if (cStage === 2) hintBox.innerText = scrambleText(currentText, 'word');
                 else if (cStage === 3) hintBox.innerText = "❓❓❓"; 
             } else {
+                // ⭐ 句子區 UI 更新
                 if (cStage === 0) hintBox.innerText = currentText; 
                 else if (cStage === 1) hintBox.innerText = scrambleText(currentText, 'sentence');
-                else if (cStage === 2) hintBox.innerText = "❓❓❓"; 
+                else if (cStage === 2) hintBox.innerHTML = generateFirstLetterHint(currentText); // 第三關：首字母提示
+                else if (cStage === 3) hintBox.innerText = "❓❓❓"; 
             }
         }
 
