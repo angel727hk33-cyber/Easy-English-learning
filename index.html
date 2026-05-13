@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動英文溫習小助手 - 裝備進化雙語版 (修復版)</title>
+    <title>互動英文溫習小助手 - Shino 進階裝備版</title>
     <!-- 引入煙花特效 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <!-- 引入前端 OCR (圖片轉文字) 庫 -->
+    <!-- 引入前端 OCR 庫 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         /* 模擬像素遊戲的字體與背景 */
@@ -65,7 +65,9 @@
         .sentence-mode #hintBox { font-size: 24px; letter-spacing: 2px; }
         .vowel { color: #FF5555; } .consonant { color: #55FFFF; } 
         .blank-space { color: #FFFF55; letter-spacing: 2px; font-weight: bold;} 
-        .syllable-dot { color: #888; font-size: 0.8em; margin: 0 2px; } 
+        
+        /* 升級：新的音節分隔符號 */
+        .syllable-dot { color: #aaaaaa; font-size: 1em; margin: 0 2px; font-weight: normal; text-shadow: none;} 
         
         #meaningBox { font-size: 22px; color: #FFD700; font-weight: bold; margin-bottom: 10px; text-shadow: 2px 2px #000; min-height: 25px;}
 
@@ -79,7 +81,6 @@
         .btn-voice { background-color: #FFAA00; box-shadow: inset 4px 4px 0px #FFCC55, inset -4px -4px 0px #CC8800;}
         .btn-back { background-color: #555; font-size: 14px; padding: 8px 15px; margin-bottom:10px; box-shadow: inset 2px 2px 0px #777, inset -2px -2px 0px #333;}
         .btn-rewind { background-color: #FF5555; box-shadow: inset 4px 4px 0px #FF9999, inset -4px -4px 0px #AA0000; margin-left: 10px;}
-        
         .btn-scan { background-color: #3498db; width: 85%; margin-bottom: 10px; box-shadow: inset 4px 4px 0px #85c1e9, inset -4px -4px 0px #21618c;}
         #ocrStatus { font-size: 14px; color: #F1C40F; font-weight: bold; margin-bottom: 10px;}
 
@@ -104,13 +105,13 @@
             <button class="btn-scan" onclick="document.getElementById('imageUpload').click()">📸 拍攝/上傳工作紙提取生字</button>
             <div id="ocrStatus" class="hidden">🔄 正在使用魔法辨識文字，請稍候...</div>
 
-            <p class="input-hint">格式：<code>英文 = 中文解釋</code> (可用 <code>-</code> 分隔音節)<br>例如：<code>ap-ple = 蘋果</code> , <code>beau-ti-ful = 美麗的</code></p>
+            <p class="input-hint">格式：<code>英文 = 中文解釋</code> (可用 <code>-</code> 分隔音節)<br>例如：<code>ap-ple = 蘋果</code></p>
             <textarea id="wordInput" placeholder="ap-ple = 蘋果&#10;el-e-phant = 大象"></textarea>
         </div>
         <div class="input-group">
             <h3 style="color: #55FFFF;">💬 句子區</h3>
-            <p class="input-hint">格式：<code>句子 = 中文翻譯</code> (每行一句)<br>例如：<code>I have a pen. = 我有一枝筆。</code></p>
-            <textarea id="sentenceInput" placeholder="I have a pen. = 我有一枝筆。&#10;She is eating. = 她在吃東西。"></textarea>
+            <p class="input-hint">格式：<code>句子 = 中文翻譯</code> (同樣支援 <code>-</code> 分隔音節)<br>例如：<code>I have a beau-ti-ful pen. = 我有一枝筆。</code></p>
+            <textarea id="sentenceInput" placeholder="I have a beau-ti-ful pen. = 我有一枝美麗的筆。&#10;She is eat-ing. = 她在吃東西。"></textarea>
         </div>
         <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px; background-color: #55FF55; color: #000; text-shadow: none;">⚔️ 裝備完畢，出發！</button>
     </div>
@@ -151,7 +152,7 @@
 
         <button class="btn-back" onclick="switchMode('parent')">🏳️ 撤退修改</button>
         <button class="btn-voice" onclick="speakWord()">🔊 聽音效</button>
-        <button id="rewindBtn" class="btn-rewind hidden" onclick="rewindWord()">🔄 唔太熟？重練此字</button>
+        <button id="rewindBtn" class="btn-rewind hidden" onclick="rewindWord()">🔄 唔太熟？重練此題</button>
 
         <div id="progressText">任務進度：1 / 5</div>
         <div id="stageBadge" class="stage-badge stage-0">第一關</div>
@@ -235,8 +236,11 @@
         if (localStorage.getItem('savedSentences')) document.getElementById('sentenceInput').value = localStorage.getItem('savedSentences');
     };
 
+    // 解析文字並提取中文意思與音節 (已修復：句子區現在只用換行分隔，避免被逗號腰斬！)
     function parseInput(rawText, type) {
-        let arr = rawText.split(/[\n,]+/).map(w => w.trim()).filter(w => w.length > 0);
+        let delimiter = type === 'word' ? /[\n,]+/ : /\n+/;
+        let arr = rawText.split(delimiter).map(w => w.trim()).filter(w => w.length > 0);
+        
         return arr.map(item => {
             let parts = item.split('=');
             let rawEng = parts[0].trim();
@@ -290,6 +294,7 @@
         const rawSentences = document.getElementById('sentenceInput').value;
         localStorage.setItem('savedWords', rawWords); localStorage.setItem('savedSentences', rawSentences);
         
+        // 修正：傳入 type 參數，確保句子不會被逗號拆分
         tasks.word = parseInput(rawWords, 'word');
         tasks.sentence = parseInput(rawSentences, 'sentence');
 
@@ -377,23 +382,36 @@
         anim.onfinish = () => { stone.remove(); playerTakeDamage(); };
     }
 
+    // ⭐ 裝備升級階梯改為每 20 粒鑽石升級一次
     function checkEquipmentUpdate() {
         const playerEl = document.getElementById('player');
-        let newLevel = 0;
-        if (coins >= 100) newLevel = 2;
-        else if (coins >= 50) newLevel = 1;
+        
+        let newLevel = Math.floor(coins / 20); 
+        if (newLevel > 5) newLevel = 5; // 最高等級限制
+
+        // 裝備清單
+        const equips = [
+            '👧',          // 0: 0-19 鑽石
+            '👧🗡️',        // 1: 20-39 鑽石 (木劍)
+            '🧝‍♀️🗡️',        // 2: 40-59 鑽石 (鐵甲)
+            '🧝‍♀️🛡️🗡️',      // 3: 60-79 鑽石 (鐵甲與盾牌)
+            '🦸‍♀️✨',         // 4: 80-99 鑽石 (鑽石裝)
+            '🦸‍♀️✨🛡️🗡️'      // 5: 100+ 鑽石 (終極附魔鑽石裝)
+        ];
+        
+        const equipNames = [
+            '', '【木劍】', '【鐵製裝甲】', '【鐵甲與盾牌】', '【鑽石套裝】', '【終極附魔鑽石裝甲】'
+        ];
 
         if (newLevel > equipmentLevel) {
             equipmentLevel = newLevel;
             playerEl.classList.remove('animate-upgrade'); void playerEl.offsetWidth; playerEl.classList.add('animate-upgrade');
             triggerFireworks();
-            if (equipmentLevel === 1) {
-                playerEl.innerText = '🧝‍♀️🗡️';
-                alert("💎 累積滿 50 粒鑽石！Shino 裝備了【木劍】！");
-            } else if (equipmentLevel === 2) {
-                playerEl.innerText = '🦸‍♀️✨🛡️';
-                alert("💎 累積滿 100 粒鑽石！Shino 進化為【終極鑽石裝甲】！");
-            }
+            playerEl.innerText = equips[equipmentLevel];
+            // 延遲一點點 alert，讓煙花先爆發
+            setTimeout(() => {
+                alert(`💎 累積滿 ${equipmentLevel * 20} 粒鑽石！Shino 裝備升級為 ${equipNames[equipmentLevel]}！`);
+            }, 300);
         }
     }
 
@@ -458,9 +476,7 @@
                     feedbackMessage.innerHTML = `✨ 很好！放置了方塊！還有 ${targetCount - typingCount[activeTab]} 次！`;
                     feedbackMessage.className = "correct"; inputField.focus(); 
                     if (activeTab === 'word' && currentStage === 1) {
-                        // 【BUG 修復點：在這裡加上動態更新 UI 的語法！】
                         tasks.word[currentIndex.word].fillHint = generateFillBlank(currentTaskText);
-                        document.getElementById('hintBox').innerHTML = tasks.word[currentIndex.word].fillHint.replace(/_/g, '<span class="blank-space">_</span>');
                     }
                     updateRepeatDots(); return; 
                 } else { 
@@ -495,17 +511,18 @@
         window.speechSynthesis.speak(utterance);
     }
 
+    // ⭐ 更新：音節分隔點轉換為 "/"
     function formatPhonicsWord(rawText) {
         const vowels = ['a', 'e', 'i', 'o', 'u']; let formatted = '';
         for (let char of rawText) {
             if (char === '-') {
-                formatted += `<span class="syllable-dot">•</span>`; 
+                formatted += `<span class="syllable-dot">/</span>`; 
             } else if (vowels.includes(char.toLowerCase())) {
                 formatted += `<span class="vowel">${char}</span>`;
             } else if (/[a-zA-Z]/.test(char)) {
                 formatted += `<span class="consonant">${char}</span>`;
             } else {
-                formatted += char; 
+                formatted += char; // 標點符號或空格不受影響
             }
         }
         return formatted;
@@ -581,7 +598,8 @@
                 else rewindBtn.classList.add('hidden');
 
             } else {
-                if (cStage === 0) hintBox.innerText = currentTask.text; 
+                // ⭐ 句子區：第一關現在同樣支援 Phonics 分色與 '/' 音節分隔！
+                if (cStage === 0) hintBox.innerHTML = formatPhonicsWord(currentTask.rawEng); 
                 else if (cStage === 1) hintBox.innerText = scrambleText(currentTask.text, 'sentence');
                 else if (cStage === 2) hintBox.innerHTML = generateFirstLetterHint(currentTask.text); 
                 else if (cStage === 3) hintBox.innerText = "❓❓❓"; 
