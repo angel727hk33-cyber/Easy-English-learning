@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動英文溫習小助手 - 智能掃描版</title>
+    <title>互動英文溫習小助手 - 裝備進化雙語版 (修復版)</title>
     <!-- 引入煙花特效 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <!-- 引入前端 OCR (圖片轉文字) 庫 -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        /* ... (保留上一版所有的 Minecraft 風格 CSS) ... */
+        /* 模擬像素遊戲的字體與背景 */
         body { font-family: 'Courier New', Courier, monospace; background-color: #1a1a1a; color: #ffffff; text-align: center; padding: 10px; margin: 0; overflow-x: hidden; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px; }
         .container { max-width: 650px; margin: 0 auto; background: #c6c6c6; padding: 20px; border: 6px solid #000; box-shadow: inset -6px -6px 0px 0px #555, inset 6px 6px 0px 0px #fff; position: relative; }
         h1 { color: #55FF55; margin-top: 5px; font-size: 32px; text-shadow: 3px 3px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;}
@@ -80,7 +80,6 @@
         .btn-back { background-color: #555; font-size: 14px; padding: 8px 15px; margin-bottom:10px; box-shadow: inset 2px 2px 0px #777, inset -2px -2px 0px #333;}
         .btn-rewind { background-color: #FF5555; box-shadow: inset 4px 4px 0px #FF9999, inset -4px -4px 0px #AA0000; margin-left: 10px;}
         
-        /* 智能掃描按鈕專屬樣式 */
         .btn-scan { background-color: #3498db; width: 85%; margin-bottom: 10px; box-shadow: inset 4px 4px 0px #85c1e9, inset -4px -4px 0px #21618c;}
         #ocrStatus { font-size: 14px; color: #F1C40F; font-weight: bold; margin-bottom: 10px;}
 
@@ -97,28 +96,25 @@
 <div class="container">
     <h1>⚔️ Shino 方塊守護戰</h1>
 
-    <!-- 家長設定區 -->
     <div id="parentMode">
         <p style="color: #333; font-weight: bold;">準備建築材料與設計圖：</p>
         <div class="input-group">
             <h3>📝 詞語區</h3>
-            
-            <!-- 新增：相機/圖片上傳功能 -->
             <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="processImage(event)">
             <button class="btn-scan" onclick="document.getElementById('imageUpload').click()">📸 拍攝/上傳工作紙提取生字</button>
             <div id="ocrStatus" class="hidden">🔄 正在使用魔法辨識文字，請稍候...</div>
 
-            <p class="input-hint">格式：<code>英文 = 中文解釋</code> (可用 <code>-</code> 分隔音節)<br>例如：<code>ap-ple = 蘋果</code></p>
+            <p class="input-hint">格式：<code>英文 = 中文解釋</code> (可用 <code>-</code> 分隔音節)<br>例如：<code>ap-ple = 蘋果</code> , <code>beau-ti-ful = 美麗的</code></p>
             <textarea id="wordInput" placeholder="ap-ple = 蘋果&#10;el-e-phant = 大象"></textarea>
         </div>
         <div class="input-group">
             <h3 style="color: #55FFFF;">💬 句子區</h3>
-            <textarea id="sentenceInput" placeholder="I have a pen. = 我有一枝筆。"></textarea>
+            <p class="input-hint">格式：<code>句子 = 中文翻譯</code> (每行一句)<br>例如：<code>I have a pen. = 我有一枝筆。</code></p>
+            <textarea id="sentenceInput" placeholder="I have a pen. = 我有一枝筆。&#10;She is eating. = 她在吃東西。"></textarea>
         </div>
         <button onclick="saveTasks()" style="font-size: 22px; padding: 15px 40px; background-color: #55FF55; color: #000; text-shadow: none;">⚔️ 裝備完畢，出發！</button>
     </div>
 
-    <!-- 遊戲區 -->
     <div id="kidMode" class="hidden">
         <div class="tab-container">
             <button id="tabWord" class="tab-btn active" onclick="switchTab('word')">🗡️ 詞語挑戰</button>
@@ -173,7 +169,6 @@
 </div>
 
 <script>
-    // --- 新增：圖片辨識 (OCR) 功能 ---
     async function processImage(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -184,7 +179,6 @@
         statusText.innerText = "🔄 正在使用魔法辨識圖片中的文字... (可能需要十幾秒)";
 
         try {
-            // 使用 Tesseract.js 辨識英文字母
             const result = await Tesseract.recognize(file, 'eng', {
                 logger: m => {
                     if (m.status === 'recognizing text') {
@@ -193,14 +187,11 @@
                 }
             });
 
-            // 簡單過濾掉雜訊，提取長度大於 2 的英文單字
             const rawText = result.data.text;
             const words = rawText.match(/\b[A-Za-z]{2,}\b/g);
             
             if (words && words.length > 0) {
-                // 將單字變成全小寫並去除重複
                 const uniqueWords = [...new Set(words.map(w => w.toLowerCase()))];
-                // 附加到輸入框中，並預留加上中文解釋的空間
                 const formattedWords = uniqueWords.map(w => `${w} = `).join('\n');
                 
                 if(wordInput.value.trim() !== '') {
@@ -218,7 +209,6 @@
         }
     }
 
-    // --- 遊戲邏輯 ---
     let tasks = { word: [], sentence: [], quiz: [] };
     let currentIndex = { word: 0, sentence: 0, quiz: 0 };
     let learningStage = { word: 0, sentence: 0 }; 
@@ -468,7 +458,9 @@
                     feedbackMessage.innerHTML = `✨ 很好！放置了方塊！還有 ${targetCount - typingCount[activeTab]} 次！`;
                     feedbackMessage.className = "correct"; inputField.focus(); 
                     if (activeTab === 'word' && currentStage === 1) {
+                        // 【BUG 修復點：在這裡加上動態更新 UI 的語法！】
                         tasks.word[currentIndex.word].fillHint = generateFillBlank(currentTaskText);
+                        document.getElementById('hintBox').innerHTML = tasks.word[currentIndex.word].fillHint.replace(/_/g, '<span class="blank-space">_</span>');
                     }
                     updateRepeatDots(); return; 
                 } else { 
